@@ -5,6 +5,8 @@ import json
 import time
 import os
 import re
+import argparse
+import sys
 from datetime import datetime
 import warnings
 
@@ -45,7 +47,7 @@ PARAMS = {
 }
 PARAM_CODES_STR = ",".join(PARAMS.keys())
 
-TIMEOUT = 20 # Increased to help with read timeouts
+TIMEOUT = 40 # Increased to help with read timeouts
 
 def get_session():
     """
@@ -145,37 +147,56 @@ def check_site_monitors(email, key, state, county, site):
         return False, []
 
 def fetch_hourly_data(email, key, state, county, site, bdate, edate):
-    """Fetch hourly data for the specified date range and site."""
+    """
+    Fetch hourly data for the specified date range and site.
+    Includes robust retry logic to handle intermittent API failures.
+    """
     url = f"{BASE_URL}/sampleData/bySite?email={email}&key={key}&param={PARAM_CODES_STR}&bdate={bdate}&edate={edate}&state={state}&county={county}&site={site}"
-    try:
-        session = get_session()
-        resp = session.get(url, timeout=TIMEOUT, verify=False)
-        wait_for_api() 
+    
+    max_retries = 5
+    base_delay = 5  # seconds
+    
+    for attempt in range(1, max_retries + 1):
+        try:
+            session = get_session()
+            resp = session.get(url, timeout=TIMEOUT, verify=False)
+            
+            if resp.status_code == 200:
+                # Success!
+                wait_for_api() 
+                return resp.json().get('Data', [])
+            
+            # Non-200 status code
+            print(f"    [Attempt {attempt}/{max_retries}] Error {resp.status_code} fetching {bdate}-{edate}. Retrying...")
+            
+        except Exception as e:
+            print(f"    [Attempt {attempt}/{max_retries}] Exception: {e}. Retrying...")
         
-        if resp.status_code != 200:
-            print(f"    Error fetching {bdate}-{edate}: {resp.status_code}")
-            return []
-        
-        return resp.json().get('Data', [])
-    except Exception as e:
-        print(f"    Exception fetching data: {e}")
-        return []
+        # Wait before retrying (exponential backoff capped at 60s)
+        sleep_time = min(base_delay * (2 ** (attempt - 1)), 60)
+        time.sleep(sleep_time)
+    
+    print(f"    Failed to fetch data for {bdate}-{edate} after {max_retries} attempts.")
+    return []
 
 def sanitize_filename(name):
     return re.sub(r'[^\w\-_]', '_', name)
 
-def main():
-    START_YEAR = 1980
-    END_YEAR = datetime.now().year
-    
-    # 1. Get Sites
-    sites = get_sites(API_EMAIL, API_KEY, STATE_CODE)
+def identify_valid_sites(email, key, state_code):
+    """
+    Fetches all sites and filters them to find ones with all required parameters.
+    Saves the list of valid sites to a JSON file.
+    """
+    sites = get_sites(email, key, state_code)
     print(f"Total Sites in Utah: {len(sites)}")
     
     if not sites:
         print("No sites found. Check API/Network.")
-        return
+        return []
 
+    valid_sites = []
+    print("Checking sites for required parameters...")
+    
     for site_info in sites:
         site_id = site_info['code']
         county_code = site_info['county_code']
@@ -183,105 +204,146 @@ def main():
         if not site_name or not site_name.strip():
              site_name = site_info.get('local_site_name', f"Site_{site_id}")
         
-        safe_name = sanitize_filename(f"{site_name}_{site_id}")
-        
-        print(f"Processing Site: {site_name} (ID: {site_id}) in County {county_code}...")
-        
-        # 2. Monitor Check
-        has_all, found = check_site_monitors(API_EMAIL, API_KEY, STATE_CODE, county_code, site_id)
-        if not has_all:
-             # msg = [PARAMS.get(p, p) for p in found]
-             # print(f"  Skipping. Missing params.")
-             continue
-        
-        print(f"  Site has all parameters. Fetching data...")
-        
-        all_records = []
-        for year in range(START_YEAR, END_YEAR + 1):
-            if year == datetime.now().year:
-                 today_str = datetime.now().strftime("%Y%m%d")
-                 bdate = f"{year}0101"
-                 if bdate > today_str: break
-                 edate = min(f"{year}1231", today_str)
-            else:
-                 bdate = f"{year}0101"
-                 edate = f"{year}1231"
+        # Monitor Check
+        has_all, found = check_site_monitors(email, key, state_code, county_code, site_id)
+        if has_all:
+            print(f"  [VALID] {site_name} (ID: {site_id}, County: {county_code})")
+            site_info['clean_name'] = sanitize_filename(f"{site_name}_{site_id}")
+            valid_sites.append(site_info)
+        else:
+            # print(f"  [SKIP] {site_name} - Missing params")
+            pass
             
-            # Optimization: Skip fetching if we already know no data? 
-            # No, fetch_data is the source of truth.
-            
-            print(f"    Fetching {year}...")
-            data = fetch_hourly_data(API_EMAIL, API_KEY, STATE_CODE, county_code, site_id, bdate, edate)
-            all_records.extend(data)
-            
-        if not all_records:
-            print("  No data records found.")
-            continue
-            
-        # 3. Process
-        print(f"  Processing {len(all_records)} records...")
-        df = pd.DataFrame(all_records)
-        if df.empty: continue
+    # Save valid sites
+    output_file = "data/valid_sites.json"
+    with open(output_file, 'w') as f:
+        json.dump(valid_sites, f, indent=4)
+        
+    print(f"\nFound {len(valid_sites)} valid sites.")
+    print(f"List saved to {output_file}")
+    
+    # Print instructions for processing
+    print("\nTo process these sites, run python scraper.py --action process --county <COUNTY> --site <SITE_ID> --name <NAME>")
+    return valid_sites
 
-        df['datetime'] = pd.to_datetime(df['date_local'] + ' ' + df['time_local'])
-        df['param_name'] = df['parameter_code'].map(PARAMS)
+def process_single_site(email, key, state_code, county_code, site_id, site_name=None):
+    """
+    Fetches and processes data for a single site.
+    """
+    START_YEAR = 1980
+    END_YEAR = datetime.now().year
+    
+    if not site_name:
+        site_name = f"Site_{site_id}"
+    
+    safe_name = sanitize_filename(site_name)
+    print(f"Processing Site: {site_name} (ID: {site_id}, County: {county_code})...")
+    
+    all_records = []
+    for year in range(START_YEAR, END_YEAR + 1):
+        if year == datetime.now().year:
+             today_str = datetime.now().strftime("%Y%m%d")
+             bdate = f"{year}0101"
+             if bdate > today_str: break
+             edate = min(f"{year}1231", today_str)
+        else:
+             bdate = f"{year}0101"
+             edate = f"{year}1231"
         
-        # Metadata logic
-        parameter_details = {}
-        for p_code, p_name in PARAMS.items():
-             subset = df[df['parameter_code'] == p_code]
-             if not subset.empty:
-                 details = {}
-                 exclude = ['date_local', 'time_local', 'date_gmt', 'time_gmt', 'sample_measurement', 'datetime', 'param_name', 'parameter_code', 'state_code', 'county_code', 'site_number']
-                 candidates = [c for c in subset.columns if c not in exclude]
-                 for col in candidates:
-                     unique_vals = subset[col].dropna().unique()
-                     val_list = []
-                     for v in unique_vals:
-                         if hasattr(v, 'item'): v = v.item() 
-                         val_list.append(v)
-                     
-                     if len(val_list) == 1:
-                         details[col] = val_list[0]
-                     elif len(val_list) > 1:
-                         details[col] = val_list
-                     else:
-                         details[col] = None
-                 parameter_details[p_name] = details
-             else:
-                 parameter_details[p_name] = "No Data"
+        print(f"    Fetching {year}...")
+        data = fetch_hourly_data(email, key, state_code, county_code, site_id, bdate, edate)
+        all_records.extend(data)
+        
+    if not all_records:
+        print("  No data records found.")
+        return
+        
+    # Process
+    print(f"  Processing {len(all_records)} records...")
+    df = pd.DataFrame(all_records)
+    if df.empty: 
+        print("  DataFrame is empty.")
+        return
 
-        # Pivot
-        df_pivoted = df.pivot_table(index='datetime', columns='param_name', values='sample_measurement', aggfunc='mean')
+    df['datetime'] = pd.to_datetime(df['date_local'] + ' ' + df['time_local'])
+    df['param_name'] = df['parameter_code'].map(PARAMS)
+    
+    # Metadata logic
+    parameter_details = {}
+    for p_code, p_name in PARAMS.items():
+         subset = df[df['parameter_code'] == p_code]
+         if not subset.empty:
+             details = {}
+             exclude = ['date_local', 'time_local', 'date_gmt', 'time_gmt', 'sample_measurement', 'datetime', 'param_name', 'parameter_code', 'state_code', 'county_code', 'site_number']
+             candidates = [c for c in subset.columns if c not in exclude]
+             for col in candidates:
+                 unique_vals = subset[col].dropna().unique()
+                 val_list = []
+                 for v in unique_vals:
+                     if hasattr(v, 'item'): v = v.item() 
+                     val_list.append(v)
+                 
+                 if len(val_list) == 1:
+                     details[col] = val_list[0]
+                 elif len(val_list) > 1:
+                     details[col] = val_list
+                 else:
+                     details[col] = None
+             parameter_details[p_name] = details
+         else:
+             parameter_details[p_name] = "No Data"
+
+    # Pivot
+    df_pivoted = df.pivot_table(index='datetime', columns='param_name', values='sample_measurement', aggfunc='mean')
+    
+    # Save Raw
+    raw_file = f"data/{safe_name}_raw.csv"
+    df_pivoted.to_csv(raw_file)
+    print(f"  Saved RAW: {raw_file}")
+    
+    # Clean
+    required_cols = ['O3', 'NO', 'NO2', 'SR', 'Temp']
+    df_pivoted = df_pivoted.reindex(columns=required_cols)
+    df_cleaned = df_pivoted.dropna()
+    
+    cleaned_file = f"data/{safe_name}_cleaned.csv"
+    df_cleaned.to_csv(cleaned_file)
+    print(f"  Saved CLEANED: {cleaned_file} ({len(df_cleaned)} rows)")
+    
+    # Save Metadata
+    metadata = {
+        "site_name": site_name,
+        "site_id": site_id,
+        "county_code": county_code,
+        "params": required_cols,
+        "details": parameter_details,
+        "raw_file": raw_file,
+        "cleaned_file": cleaned_file
+    }
+    meta_file = f"data/{safe_name}_metadata.json"
+    with open(meta_file, 'w') as f:
+        json.dump(metadata, f, indent=4)
+    print(f"  Saved Metadata: {meta_file}")
+
+def main():
+    parser = argparse.ArgumentParser(description="Utah Air Quality Data Scraper")
+    parser.add_argument('--action', choices=['identify', 'process'], required=True, help="Action to perform: 'identify' valid sites or 'process' a single site.")
+    parser.add_argument('--site', help="Site ID (required for 'process')")
+    parser.add_argument('--county', help="County Code (required for 'process')")
+    parser.add_argument('--name', help="Site Name (optional, used for filename in 'process')")
+    
+    args = parser.parse_args()
+    
+    if args.action == 'identify':
+        identify_valid_sites(API_EMAIL, API_KEY, STATE_CODE)
         
-        # Save Raw
-        raw_file = f"data/{safe_name}_raw.csv"
-        df_pivoted.to_csv(raw_file)
-        print(f"  Saved RAW: {raw_file}")
-        
-        # Clean
-        required_cols = ['O3', 'NO', 'NO2', 'SR', 'Temp']
-        df_pivoted = df_pivoted.reindex(columns=required_cols)
-        df_cleaned = df_pivoted.dropna()
-        
-        cleaned_file = f"data/{safe_name}_cleaned.csv"
-        df_cleaned.to_csv(cleaned_file)
-        print(f"  Saved CLEANED: {cleaned_file} ({len(df_cleaned)} rows)")
-        
-        # Save Metadata
-        metadata = {
-            "site_name": site_name,
-            "site_id": site_id,
-            "county_code": county_code,
-            "params": required_cols,
-            "details": parameter_details,
-            "raw_file": raw_file,
-            "cleaned_file": cleaned_file
-        }
-        meta_file = f"data/{safe_name}_metadata.json"
-        with open(meta_file, 'w') as f:
-            json.dump(metadata, f, indent=4)
-        print(f"  Saved Metadata: {meta_file}")
+    elif args.action == 'process':
+        if not args.site or not args.county:
+            print("Error: --site and --county are required for 'process' action.")
+            sys.exit(1)
+            
+        site_name = args.name if args.name else f"Site_{args.site}"
+        process_single_site(API_EMAIL, API_KEY, STATE_CODE, args.county, args.site, site_name)
 
 if __name__ == "__main__":
     main()
