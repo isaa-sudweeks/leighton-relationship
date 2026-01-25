@@ -43,7 +43,8 @@ PARAMS = {
     "42601": "NO",
     "42602": "NO2",
     "63301": "SR",
-    "62101": "Temp"
+    "62101": "Temp",
+    "63302": "UV"
 }
 PARAM_CODES_STR = ",".join(PARAMS.keys())
 
