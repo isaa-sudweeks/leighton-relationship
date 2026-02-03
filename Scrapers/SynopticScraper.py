@@ -100,32 +100,41 @@ def fetch_synoptic_data(station_id, start_time, end_time, token, station_timezon
         
         if not data.get('STATION'):
             print("No data found for this station in the given time range.")
-            return pd.DataFrame()
+            return pd.DataFrame(), {}, {}
             
         observations = data['STATION'][0].get('OBSERVATIONS', {})
         
         if 'date_time' not in observations or 'solar_radiation_set_1' not in observations:
             print("Expected data fields missing in response.")
-            return pd.DataFrame()
+            return pd.DataFrame(), {}, {}
 
-        # Parse with utc=True to handle mixed offsets (DST)
-        dates = pd.to_datetime(observations['date_time'], utc=True)
-        
-        # Convert to station's local time if timezone is available
-        if station_timezone:
-            try:
-                dates = dates.tz_convert(station_timezone)
-            except Exception as e:
-                print(f"Warning: Could not convert to timezone {station_timezone}: {e}")
-        
-        # Make naive to match CSV (stripping offset, keeping wall time)
-        dates = dates.tz_localize(None)
+        # Parse datetimes as provided by Synoptic
+        # When obtimezone=local, strings may already be local time with offsets.
+        # Avoid forcing UTC unless we need to; keep wall time for merging with AQS local time.
+        dates = pd.to_datetime(observations['date_time'], errors='coerce')
+        if dates.tz is not None:
+            if station_timezone:
+                try:
+                    dates = dates.tz_convert(station_timezone)
+                except Exception as e:
+                    print(f"Warning: Could not convert to timezone {station_timezone}: {e}")
+            # Strip timezone info, keeping local wall time
+            dates = dates.tz_localize(None)
 
 
         synoptic_df = pd.DataFrame({
             'datetime_synoptic': dates,
             'SR_Synoptic': observations['solar_radiation_set_1']
         })
+        # Aggregate to hourly to match AQS sample_duration
+        synoptic_df = synoptic_df.dropna(subset=['datetime_synoptic'])
+        synoptic_df = (
+            synoptic_df
+            .set_index('datetime_synoptic')
+            .resample('H')
+            .mean()
+            .reset_index()
+        )
         
         # Get Units and Sensor Variables if available
         units = data.get('UNITS', {})
@@ -163,7 +172,15 @@ def fuse_data(original_df, synoptic_df):
     # Using merge_asof is safer for slight time diffs, but let's stick to simple merge if we assume hourly alignment
     # Or just generic merge.
     
-    merged_df = pd.merge(original_df, synoptic_df, on='datetime', how='left')
+    original_df = original_df.sort_values('datetime')
+    synoptic_df = synoptic_df.sort_values('datetime')
+    merged_df = pd.merge_asof(
+        original_df,
+        synoptic_df,
+        on='datetime',
+        direction='nearest',
+        tolerance=pd.Timedelta(minutes=30)
+    )
     
     return merged_df
 
