@@ -1,0 +1,4 @@
+pressure_pa,median_lr,absolute_distance_from_unity,evidence_class
+80000.0,2.156973435131544,1.156973435131544,sensitivity_only
+87000.0,1.983423848396822,0.9834238483968221,current_assumption
+95000.0,1.8163986822160372,0.8163986822160372,sensitivity_only

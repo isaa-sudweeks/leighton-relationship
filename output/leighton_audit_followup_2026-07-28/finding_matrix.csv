@@ -1,0 +1,15 @@
+finding,audit_issue,current_status,median_test,evidence
+1,Mixed monitoring sites,closed_for_current_analysis,included,Hawthorne AQS site 49-035-3006 is joined only to UV column HW.
+2,AQS parameter request limit and payload validation,closed_in_current_scraper,no_direct_effect_on_frozen_snapshot,Six parameters are split into 5+1 batches; payload errors are tested.
+3,Below-MDL denominator values,partially_closed,included,"Row-level MDLs are retained and excluded. In the UV-threshold population, 45/123 selected NO values are below MDL."
+4,Timezone and daylight-saving mismatch,partially_closed,included,AQS UTC and Local Standard Time are preserved; UV shift 0 h has the highest tested UV-SR correlation (r=0.994644). UV metadata still lacks an explicit timezone contract.
+5,"Loss of POC, method, MDL, and qualifier provenance",closed_for_current_snapshot,included,Long-form samples retain provenance; the analysis table uses explicit POCs and preserves raw/audit columns.
+6,Destructive or non-transactional writes,partially_closed,no_direct_effect_on_frozen_snapshot,AQS downloads are immutable dated snapshots and derived writes are atomic; the legacy Synoptic path was not revalidated here.
+7,Undocumented J(NO2) calibration,open_blocker,sensitivity_only,Current multiplier gives median 1.983424; removing 10/2.84 gives 0.563292 on the same 74 rows.
+8,Broad dropna and hidden filters,closed_for_current_analysis,included,"Only UV, NO, NO2, O3, and Temp are required; row counts and thresholds are recorded."
+9,Overlapping and mislabeled clock windows,closed_for_clock_split,does_not_change_all_row_median,The current split is non-overlapping and exhaustive; unit test passes.
+10,Hourly means in a nonlinear ratio,open_data_blocker,not_testable,Stored AQS measurements and UV are hourly; no colocated sub-hourly source is available in the repository.
+11,Fixed pressure and no propagated uncertainty,open_data_and_method_blocker,sensitivity_only,"At 80, 87, and 95 kPa the same-row medians are 2.156973, 1.983424, and 1.816399; observed hourly pressure is absent."
+12,Stale notebooks and irreproducible artifacts,partially_closed,supports_reproducibility_only,"The Python entry point, hashes, row accounting, tests, and this reproduction record exist; current analysis files remain uncommitted."
+13,"Credential, TLS, and dependency handling",partially_closed,no_direct_effect_on_frozen_snapshot,"Current scraper requires environment credentials, uses verified HTTPS defaults, and dependencies are declared; rotation cannot be verified from repository evidence."
+14,SR/CI filter validation and qualified values,partially_closed,included_as_separate_population,Qualified lower bounds are excluded and tested. Stored 32-row selection reconciles exactly; no solar-elevation guard exists.

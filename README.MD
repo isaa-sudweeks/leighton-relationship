@@ -23,3 +23,80 @@ An overview of the repository folders and their contents:
   - `valid_sites.json`: Metadata and identification for sites meeting analysis criteria.
 - **`Leighton_Relationship_Calculator.ipynb`**: The main research notebook used for processing data and calculating Leighton relationship parameters.
 - **`.env`**: Configuration file for API keys and environment variables (not tracked in Git).
+
+# AQS data download
+
+The AQS scraper stores each download as an immutable, typed, long-form Parquet
+snapshot. It preserves POC, method, method detection limit, qualifiers, and
+both UTC and local-standard timestamps. It does not average different POCs.
+
+Install the runtime dependencies:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+Put `API_EMAIL` and `API_KEY` in an untracked `.env` file, then download a
+specific site and explicit date range. For example, Hawthorne is Utah site
+`49-035-3006`:
+
+```bash
+python Scrapers/scraper.py \
+  --action process \
+  --county 035 \
+  --site 3006 \
+  --name Hawthorne \
+  --start-date 2024-01-01 \
+  --end-date 2026-07-28
+```
+
+Each run creates:
+
+- `aqs_samples.parquet`: source-level observations with monitor provenance.
+- `monitor_inventory.parquet`: coverage and above/below-MDL counts by POC,
+  method, and detection limit.
+- `manifest.json`: site, date range, request batching, and row counts.
+
+Use `select_poc_records` only after reviewing the inventory. Parameters not
+explicitly selected are omitted, and observations from different POCs are
+never averaged.
+
+`build_analysis_table` and `save_analysis_table` create a wide, typed table
+after explicit POC selection. Notebook-facing values are null when missing,
+below a positive row-level MDL, or marked with a non-informational qualifier.
+The output retains the original value, MDL, qualifier, POC, method code, and
+cleaning flags for auditing.
+
+Reproduce the current Hawthorne selection with:
+
+```bash
+python Scrapers/scraper.py \
+  --action prepare \
+  --input-dir data/downloads/Hawthorne/20240101_20260728_20260729T004631Z \
+  --poc NO=2 \
+  --poc NO2=3 \
+  --poc O3=1 \
+  --poc SR=1 \
+  --poc Temp=1
+```
+
+## Leighton-ratio analysis
+
+The archived notebook has been replaced by a reproducible Python entry point:
+
+```bash
+python leighton_relationship_analysis.py
+```
+
+It writes the processed May 2025 dataset, a JSON summary, the Leighton-ratio
+time series, non-overlapping clock-window distributions, and the temperature
+correction plot under `output/leighton_analysis/`.
+
+Apply the collocated AQS solar-radiation and Northern Wasatch Front
+clearing-index filters with:
+
+```bash
+python leighton_relationship_analysis.py \
+  --apply-sr-ci \
+  --output-dir output/leighton_analysis_sr_ci
+```

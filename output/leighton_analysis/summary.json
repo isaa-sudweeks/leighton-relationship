@@ -1,0 +1,55 @@
+{
+  "configuration": {
+    "year": 2025,
+    "month": 5,
+    "minimum_uv": 10.0,
+    "daytime_start": "09:00",
+    "daytime_end": "16:00",
+    "poc_selections": {
+      "NO": 2,
+      "NO2": 3,
+      "O3": 1,
+      "SR": 1,
+      "Temp": 1
+    }
+  },
+  "row_accounting": {
+    "aqs_rows": 21888,
+    "exact_uv_matches": 15552,
+    "period_rows": 744,
+    "uv_threshold_rows": 123,
+    "analysis_rows": 74,
+    "finite_ratio_rows": 74
+  },
+  "all_observations": {
+    "count": 74,
+    "median": 1.983423848396822,
+    "p10": 0.9444418197294018,
+    "p90": 4.958226169918234,
+    "minimum": 0.6535427004501975,
+    "maximum": 7.039181981913279
+  },
+  "daytime_window": {
+    "count": 63,
+    "median": 2.3021865958073064,
+    "p10": 1.0812960377822076,
+    "p90": 5.124576727909331,
+    "minimum": 0.9419217210324217,
+    "maximum": 7.039181981913279
+  },
+  "outside_window": {
+    "count": 11,
+    "median": 0.7944756184593269,
+    "p10": 0.6858265398329908,
+    "p90": 1.5093615256496435,
+    "minimum": 0.6535427004501975,
+    "maximum": 2.239265010626419
+  },
+  "scientific_assumptions_to_validate": {
+    "j_calibration_constant": 7.784e-05,
+    "uv_sensor_area_cm2": 2.84,
+    "j_scale_factor": 10.0,
+    "fixed_pressure_pa": 87000.0,
+    "timestamp_join": "exact naive Local Standard Time to UV timestamp"
+  }
+}

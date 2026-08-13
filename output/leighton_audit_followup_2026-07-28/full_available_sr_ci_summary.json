@@ -1,0 +1,83 @@
+{
+  "count": 202,
+  "start": "2024-03-08 12:00",
+  "end": "2025-09-29 12:00",
+  "mean": 0.6707160578837591,
+  "median": 0.5259059118973425,
+  "p10": 0.14851073859187564,
+  "p90": 1.5775520368564275,
+  "minimum": 0.06766308014074539,
+  "maximum": 2.504493398804665,
+  "standard_deviation": 0.53593672392722,
+  "retained_local_standard_hours": [
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "rows_outside_06_to_20": 0,
+  "calculation": "LR_without_10_over_2_84 = stored-formula LR / (10/2.84)",
+  "accounting": {
+    "aqs_rows": 21888,
+    "aqs_start": "2024-01-01 00:00:00",
+    "aqs_end": "2026-06-30 23:00:00",
+    "uv_rows": 21696,
+    "uv_start": "2023-04-20 00:00:00",
+    "uv_end": "2025-10-09 23:00:00",
+    "exact_overlap_rows": 15552,
+    "overlap_start": "2024-01-01 00:00:00",
+    "overlap_end": "2025-10-09 23:00:00",
+    "uv_alignment_candidates": [
+      {
+        "shift_hours": -3,
+        "paired_rows": 7723,
+        "uv_sr_pearson_r": 0.44030903514030767
+      },
+      {
+        "shift_hours": -2,
+        "paired_rows": 7721,
+        "uv_sr_pearson_r": 0.6659395190668597
+      },
+      {
+        "shift_hours": -1,
+        "paired_rows": 7721,
+        "uv_sr_pearson_r": 0.8647595500096308
+      },
+      {
+        "shift_hours": 0,
+        "paired_rows": 7723,
+        "uv_sr_pearson_r": 0.965119372225822
+      },
+      {
+        "shift_hours": 1,
+        "paired_rows": 7721,
+        "uv_sr_pearson_r": 0.8621283534931686
+      },
+      {
+        "shift_hours": 2,
+        "paired_rows": 7721,
+        "uv_sr_pearson_r": 0.6715430381711519
+      },
+      {
+        "shift_hours": 3,
+        "paired_rows": 7721,
+        "uv_sr_pearson_r": 0.4398679711010451
+      }
+    ],
+    "uv_selected_shift_hours": 0,
+    "uv_threshold_rows": 2961,
+    "complete_required_rows": 1947,
+    "sr_threshold_rows": 731,
+    "ci_history_rows_air_shed_5": 357,
+    "ci_history_source": "cached_prior_download",
+    "ci_history_start": "2024-03-06",
+    "ci_history_end": "2025-10-04",
+    "missing_ci_rows_after_sr": 149,
+    "qualified_ci_rows_after_sr": 380,
+    "above_ci_threshold_rows": 0,
+    "sr_ci_rows": 202
+  }
+}

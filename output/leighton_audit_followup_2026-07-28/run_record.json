@@ -1,0 +1,422 @@
+{
+  "analysis_question": "Does applying the audit-supported corrections move the median Leighton ratio closer to 1?",
+  "metric": "absolute_distance_from_unity = abs(median(LR) - 1)",
+  "data_period": "May 2025",
+  "time_basis": "AQS Local Standard Time; UV integer-hour alignment tested",
+  "source_hashes_sha256": {
+    "data/downloads/Hawthorne/20240101_20260728_20260729T004631Z/aqs_analysis_ready.parquet": "ab220addb5a5aca9f9de0fa6f7be08a6aaeb6792986f83a131a1d486db32716e",
+    "data/downloads/Hawthorne/20240101_20260728_20260729T004631Z/aqs_samples.parquet": "55bfe3f0419e394ab9a9e5e0610fea0d013063916ebff05e55bf4d71f61f8e19",
+    "data/UV Data/UV Data All Time HW LP RB.csv": "66830b092d1ffeaa2556da502b9305c065a268f26c9f8b080c803ec366988cc9",
+    "leighton_relationship_analysis.py": "e6e8dab50f8cea9312bca540656af061b7ecf9eef980361359207b67bab314ce",
+    "output/doc/Leighton_Relationship_Code_Review_2026-07-28.docx": "78d2d297996c7917440a8b541f20905a745a8a6f2aedd47cbaf525090efb2f3d",
+    "output/leighton_analysis_sr_ci_uv_aligned/leighton_ratio_may_2025.parquet": "f8c325f16852d4b7c68a6657c997f1e04c2d2613acd2cac75542c1c796aa951d"
+  },
+  "selected_uv_shift_hours": 0,
+  "row_accounting": {
+    "aqs_rows": 21888,
+    "uv_alignment_method": "maximum_UV_SR_Pearson_correlation",
+    "uv_selected_shift_hours": 0,
+    "uv_alignment_candidates": [
+      {
+        "shift_hours": -3,
+        "paired_rows": 234,
+        "uv_sr_pearson_r": 0.44685327816943166
+      },
+      {
+        "shift_hours": -2,
+        "paired_rows": 233,
+        "uv_sr_pearson_r": 0.6952384410185593
+      },
+      {
+        "shift_hours": -1,
+        "paired_rows": 232,
+        "uv_sr_pearson_r": 0.9004950909688353
+      },
+      {
+        "shift_hours": 0,
+        "paired_rows": 231,
+        "uv_sr_pearson_r": 0.9946436097148282
+      },
+      {
+        "shift_hours": 1,
+        "paired_rows": 230,
+        "uv_sr_pearson_r": 0.888998116434918
+      },
+      {
+        "shift_hours": 2,
+        "paired_rows": 229,
+        "uv_sr_pearson_r": 0.6726034292484141
+      },
+      {
+        "shift_hours": 3,
+        "paired_rows": 228,
+        "uv_sr_pearson_r": 0.40458034375804247
+      }
+    ],
+    "exact_uv_matches": 15552,
+    "period_rows": 744,
+    "uv_threshold_rows": 123,
+    "base_analysis_rows": 74,
+    "analysis_rows": 74
+  },
+  "below_mdl_and_quality_counts_after_uv_threshold": {
+    "NO": {
+      "uv_threshold_rows": 123,
+      "below_mdl_rows": 45,
+      "quality_flagged_rows": 0
+    },
+    "NO2": {
+      "uv_threshold_rows": 123,
+      "below_mdl_rows": 0,
+      "quality_flagged_rows": 0
+    },
+    "O3": {
+      "uv_threshold_rows": 123,
+      "below_mdl_rows": 0,
+      "quality_flagged_rows": 5
+    },
+    "Temp": {
+      "uv_threshold_rows": 123,
+      "below_mdl_rows": 0,
+      "quality_flagged_rows": 0
+    }
+  },
+  "stored_sr_ci_reconciliation": {
+    "stored_rows": 32,
+    "matched_corrected_rows": 32,
+    "maximum_absolute_lr_difference": 0.0
+  },
+  "independent_formula_cross_check": {
+    "rows": 74,
+    "maximum_absolute_lr_difference": 0.0
+  },
+  "finding_matrix": [
+    {
+      "finding": 1,
+      "audit_issue": "Mixed monitoring sites",
+      "current_status": "closed_for_current_analysis",
+      "median_test": "included",
+      "evidence": "Hawthorne AQS site 49-035-3006 is joined only to UV column HW."
+    },
+    {
+      "finding": 2,
+      "audit_issue": "AQS parameter request limit and payload validation",
+      "current_status": "closed_in_current_scraper",
+      "median_test": "no_direct_effect_on_frozen_snapshot",
+      "evidence": "Six parameters are split into 5+1 batches; payload errors are tested."
+    },
+    {
+      "finding": 3,
+      "audit_issue": "Below-MDL denominator values",
+      "current_status": "partially_closed",
+      "median_test": "included",
+      "evidence": "Row-level MDLs are retained and excluded. In the UV-threshold population, 45/123 selected NO values are below MDL."
+    },
+    {
+      "finding": 4,
+      "audit_issue": "Timezone and daylight-saving mismatch",
+      "current_status": "partially_closed",
+      "median_test": "included",
+      "evidence": "AQS UTC and Local Standard Time are preserved; UV shift 0 h has the highest tested UV-SR correlation (r=0.994644). UV metadata still lacks an explicit timezone contract."
+    },
+    {
+      "finding": 5,
+      "audit_issue": "Loss of POC, method, MDL, and qualifier provenance",
+      "current_status": "closed_for_current_snapshot",
+      "median_test": "included",
+      "evidence": "Long-form samples retain provenance; the analysis table uses explicit POCs and preserves raw/audit columns."
+    },
+    {
+      "finding": 6,
+      "audit_issue": "Destructive or non-transactional writes",
+      "current_status": "partially_closed",
+      "median_test": "no_direct_effect_on_frozen_snapshot",
+      "evidence": "AQS downloads are immutable dated snapshots and derived writes are atomic; the legacy Synoptic path was not revalidated here."
+    },
+    {
+      "finding": 7,
+      "audit_issue": "Undocumented J(NO2) calibration",
+      "current_status": "open_blocker",
+      "median_test": "sensitivity_only",
+      "evidence": "Current multiplier gives median 1.983424; removing 10/2.84 gives 0.563292 on the same 74 rows."
+    },
+    {
+      "finding": 8,
+      "audit_issue": "Broad dropna and hidden filters",
+      "current_status": "closed_for_current_analysis",
+      "median_test": "included",
+      "evidence": "Only UV, NO, NO2, O3, and Temp are required; row counts and thresholds are recorded."
+    },
+    {
+      "finding": 9,
+      "audit_issue": "Overlapping and mislabeled clock windows",
+      "current_status": "closed_for_clock_split",
+      "median_test": "does_not_change_all_row_median",
+      "evidence": "The current split is non-overlapping and exhaustive; unit test passes."
+    },
+    {
+      "finding": 10,
+      "audit_issue": "Hourly means in a nonlinear ratio",
+      "current_status": "open_data_blocker",
+      "median_test": "not_testable",
+      "evidence": "Stored AQS measurements and UV are hourly; no colocated sub-hourly source is available in the repository."
+    },
+    {
+      "finding": 11,
+      "audit_issue": "Fixed pressure and no propagated uncertainty",
+      "current_status": "open_data_and_method_blocker",
+      "median_test": "sensitivity_only",
+      "evidence": "At 80, 87, and 95 kPa the same-row medians are 2.156973, 1.983424, and 1.816399; observed hourly pressure is absent."
+    },
+    {
+      "finding": 12,
+      "audit_issue": "Stale notebooks and irreproducible artifacts",
+      "current_status": "partially_closed",
+      "median_test": "supports_reproducibility_only",
+      "evidence": "The Python entry point, hashes, row accounting, tests, and this reproduction record exist; current analysis files remain uncommitted."
+    },
+    {
+      "finding": 13,
+      "audit_issue": "Credential, TLS, and dependency handling",
+      "current_status": "partially_closed",
+      "median_test": "no_direct_effect_on_frozen_snapshot",
+      "evidence": "Current scraper requires environment credentials, uses verified HTTPS defaults, and dependencies are declared; rotation cannot be verified from repository evidence."
+    },
+    {
+      "finding": 14,
+      "audit_issue": "SR/CI filter validation and qualified values",
+      "current_status": "partially_closed",
+      "median_test": "included_as_separate_population",
+      "evidence": "Qualified lower bounds are excluded and tested. Stored 32-row selection reconciles exactly; no solar-elevation guard exists."
+    }
+  ],
+  "scenario_results": [
+    {
+      "scenario": "Evidence-supported corrected pipeline",
+      "evidence_class": "supported",
+      "population": "Hawthorne, May 2025, UV > 10, all ratio inputs usable",
+      "count": 74,
+      "median_lr": 1.983423848396822,
+      "absolute_distance_from_unity": 0.9834238483968221,
+      "p10": 0.9444418197294018,
+      "p90": 4.958226169918234,
+      "note": "One site; explicit POCs; row-level MDL and qualifier exclusion; minimal required columns; selected UV shift 0 h."
+    },
+    {
+      "scenario": "Raw-positive/MDL policy sensitivity",
+      "evidence_class": "sensitivity_only",
+      "population": "Same Hawthorne join, substituting raw values before positivity checks",
+      "count": 74,
+      "median_lr": 1.983423848396822,
+      "absolute_distance_from_unity": 0.9834238483968221,
+      "p10": 0.9444418197294018,
+      "p90": 4.958226169918234,
+      "note": "The result is unchanged: all 45 selected NO values below the 0.05 ppb MDL are -0.2, -0.1, or 0.0 ppb and are removed by the positivity check. This is not a general censoring solution."
+    },
+    {
+      "scenario": "Archived J = C x UV convention (sensitivity)",
+      "evidence_class": "sensitivity_only",
+      "population": "Same 74 corrected rows",
+      "count": 74,
+      "median_lr": 0.5632923729446975,
+      "absolute_distance_from_unity": 0.4367076270553025,
+      "p10": 0.26822147680315006,
+      "p90": 1.4081362322567785,
+      "note": "Removes the undocumented 10/2.84 multiplier. Instrument documentation is required before choosing this convention."
+    },
+    {
+      "scenario": "Corrected pipeline plus stored SR/CI selection",
+      "evidence_class": "supported_stored_selection",
+      "population": "32-row subset with SR >= 710 W/m2 and CI <= 1000",
+      "count": 32,
+      "median_lr": 2.355281896798399,
+      "absolute_distance_from_unity": 1.3552818967983988,
+      "p10": 1.1787800950760972,
+      "p90": 5.91311842204832,
+      "note": "Chemistry and LR values reconcile exactly to the corrected run; the external CI archive was not re-downloaded in this validation."
+    },
+    {
+      "scenario": "SR/CI subset plus archived J convention (sensitivity)",
+      "evidence_class": "sensitivity_only",
+      "population": "Same 32 stored SR/CI rows",
+      "count": 32,
+      "median_lr": 0.6689000586907452,
+      "absolute_distance_from_unity": 0.3310999413092548,
+      "p10": 0.3347735470016116,
+      "p90": 1.6793256318617227,
+      "note": "Combines a supported row selection with an unvalidated J convention."
+    }
+  ],
+  "pressure_sensitivity": [
+    {
+      "pressure_pa": 80000.0,
+      "median_lr": 2.156973435131544,
+      "absolute_distance_from_unity": 1.156973435131544,
+      "evidence_class": "sensitivity_only"
+    },
+    {
+      "pressure_pa": 87000.0,
+      "median_lr": 1.983423848396822,
+      "absolute_distance_from_unity": 0.9834238483968221,
+      "evidence_class": "current_assumption"
+    },
+    {
+      "pressure_pa": 95000.0,
+      "median_lr": 1.8163986822160372,
+      "absolute_distance_from_unity": 0.8163986822160372,
+      "evidence_class": "sensitivity_only"
+    }
+  ],
+  "uv_shift_sensitivity": [
+    {
+      "shift_hours": -3,
+      "paired_rows": 234,
+      "uv_sr_pearson_r": 0.44685327816943166,
+      "analysis_rows": 94,
+      "median_lr": 1.9458013177689768,
+      "absolute_distance_from_unity": 0.9458013177689768,
+      "selected_by_uv_sr_correlation": false
+    },
+    {
+      "shift_hours": -2,
+      "paired_rows": 233,
+      "uv_sr_pearson_r": 0.6952384410185593,
+      "analysis_rows": 89,
+      "median_lr": 1.8568608270031262,
+      "absolute_distance_from_unity": 0.8568608270031262,
+      "selected_by_uv_sr_correlation": false
+    },
+    {
+      "shift_hours": -1,
+      "paired_rows": 232,
+      "uv_sr_pearson_r": 0.9004950909688353,
+      "analysis_rows": 83,
+      "median_lr": 1.9956721507291337,
+      "absolute_distance_from_unity": 0.9956721507291337,
+      "selected_by_uv_sr_correlation": false
+    },
+    {
+      "shift_hours": 0,
+      "paired_rows": 231,
+      "uv_sr_pearson_r": 0.9946436097148282,
+      "analysis_rows": 74,
+      "median_lr": 1.983423848396822,
+      "absolute_distance_from_unity": 0.9834238483968221,
+      "selected_by_uv_sr_correlation": true
+    },
+    {
+      "shift_hours": 1,
+      "paired_rows": 230,
+      "uv_sr_pearson_r": 0.888998116434918,
+      "analysis_rows": 67,
+      "median_lr": 2.311475607515898,
+      "absolute_distance_from_unity": 1.3114756075158982,
+      "selected_by_uv_sr_correlation": false
+    },
+    {
+      "shift_hours": 2,
+      "paired_rows": 229,
+      "uv_sr_pearson_r": 0.6726034292484141,
+      "analysis_rows": 56,
+      "median_lr": 2.961367726473746,
+      "absolute_distance_from_unity": 1.9613677264737461,
+      "selected_by_uv_sr_correlation": false
+    },
+    {
+      "shift_hours": 3,
+      "paired_rows": 228,
+      "uv_sr_pearson_r": 0.40458034375804247,
+      "analysis_rows": 41,
+      "median_lr": 3.3931100728241734,
+      "absolute_distance_from_unity": 2.3931100728241734,
+      "selected_by_uv_sr_correlation": false
+    }
+  ],
+  "poc_selection_sensitivity": [
+    {
+      "no_poc": 1,
+      "no_method_code": "099",
+      "no_mdl_ppb": 5.0,
+      "no2_poc": 1,
+      "no2_method_code": "099",
+      "no2_mdl_ppb": 2.7,
+      "analysis_rows": 0,
+      "median_lr": null,
+      "absolute_distance_from_unity": null,
+      "current_selection": false,
+      "same_method_code": true
+    },
+    {
+      "no_poc": 1,
+      "no_method_code": "099",
+      "no_mdl_ppb": 5.0,
+      "no2_poc": 3,
+      "no2_method_code": "256",
+      "no2_mdl_ppb": 0.1,
+      "analysis_rows": 0,
+      "median_lr": null,
+      "absolute_distance_from_unity": null,
+      "current_selection": false,
+      "same_method_code": false
+    },
+    {
+      "no_poc": 2,
+      "no_method_code": "699",
+      "no_mdl_ppb": 0.05,
+      "no2_poc": 1,
+      "no2_method_code": "099",
+      "no2_mdl_ppb": 2.7,
+      "analysis_rows": 59,
+      "median_lr": 1.8395479295585444,
+      "absolute_distance_from_unity": 0.8395479295585444,
+      "current_selection": false,
+      "same_method_code": false
+    },
+    {
+      "no_poc": 2,
+      "no_method_code": "699",
+      "no_mdl_ppb": 0.05,
+      "no2_poc": 3,
+      "no2_method_code": "256",
+      "no2_mdl_ppb": 0.1,
+      "analysis_rows": 74,
+      "median_lr": 1.983423848396822,
+      "absolute_distance_from_unity": 0.9834238483968221,
+      "current_selection": true,
+      "same_method_code": false
+    },
+    {
+      "no_poc": 3,
+      "no_method_code": "256",
+      "no_mdl_ppb": 0.1,
+      "no2_poc": 1,
+      "no2_method_code": "099",
+      "no2_mdl_ppb": 2.7,
+      "analysis_rows": 39,
+      "median_lr": 2.9538324869673938,
+      "absolute_distance_from_unity": 1.9538324869673938,
+      "current_selection": false,
+      "same_method_code": false
+    },
+    {
+      "no_poc": 3,
+      "no_method_code": "256",
+      "no_mdl_ppb": 0.1,
+      "no2_poc": 3,
+      "no2_method_code": "256",
+      "no2_mdl_ppb": 0.1,
+      "analysis_rows": 40,
+      "median_lr": 2.5045860428989726,
+      "absolute_distance_from_unity": 1.5045860428989726,
+      "current_selection": false,
+      "same_method_code": true
+    }
+  ],
+  "unresolved_inputs": [
+    "Documented UV instrument output units and calibration to J(NO2) in s^-1",
+    "Scientifically approved POC/method selection policy",
+    "Observed pressure aligned to each chemistry observation",
+    "Sub-hourly colocated chemistry and photolysis data",
+    "Uncertainty model for calibration, measurement error, and censoring"
+  ]
+}
