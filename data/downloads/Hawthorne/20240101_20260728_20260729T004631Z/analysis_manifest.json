@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "source_file": "aqs_samples.parquet",
+  "analysis_file": "aqs_analysis_ready.parquet",
+  "row_accounting_file": "analysis_row_accounting.parquet",
+  "poc_selections": {
+    "NO": 2,
+    "NO2": 3,
+    "O3": 1,
+    "SR": 1,
+    "Temp": 1
+  },
+  "cleaning_rules": {
+    "missing_measurement": "set notebook-facing value to null",
+    "positive_mdl": "set values below the row-level MDL to null",
+    "qualifiers": "set non-informational qualified values to null; retain prefixes ['IT -', 'XS -']",
+    "source_retention": "retain raw measurement, MDL, qualifier, POC, method, and flags"
+  },
+  "analysis_rows": 21888,
+  "complete_core_chemistry_rows": 12551
+}

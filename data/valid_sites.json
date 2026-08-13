@@ -1,0 +1,212 @@
+[
+    {
+        "code": "0005",
+        "value_represented": "Brigham City #3",
+        "county_code": "003",
+        "county_name": "Box Elder",
+        "clean_name": "Brigham_City__3_0005"
+    },
+    {
+        "code": "7001",
+        "value_represented": "WASHAKIE",
+        "county_code": "003",
+        "county_name": "Box Elder",
+        "clean_name": "WASHAKIE_7001"
+    },
+    {
+        "code": "0004",
+        "value_represented": "LOGAN #4",
+        "county_code": "005",
+        "county_name": "Cache",
+        "clean_name": "LOGAN__4_0004"
+    },
+    {
+        "code": "0007",
+        "value_represented": "Smithfield",
+        "county_code": "005",
+        "county_name": "Cache",
+        "clean_name": "Smithfield_0007"
+    },
+    {
+        "code": "1003",
+        "value_represented": "Price #2",
+        "county_code": "007",
+        "county_name": "Carbon",
+        "clean_name": "Price__2_1003"
+    },
+    {
+        "code": "0004",
+        "value_represented": "Bountiful Viewmont",
+        "county_code": "011",
+        "county_name": "Davis",
+        "clean_name": "Bountiful_Viewmont_0004"
+    },
+    {
+        "code": "0002",
+        "value_represented": "Roosevelt",
+        "county_code": "013",
+        "county_name": "Duchesne",
+        "clean_name": "Roosevelt_0002"
+    },
+    {
+        "code": "7011",
+        "value_represented": "STATION LOCATED NEAR INTERSECTION OF 6000 SO & 10000 WEST",
+        "county_code": "013",
+        "county_name": "Duchesne",
+        "clean_name": "STATION_LOCATED_NEAR_INTERSECTION_OF_6000_SO___10000_WEST_7011"
+    },
+    {
+        "code": "0007",
+        "value_represented": "Moab",
+        "county_code": "019",
+        "county_name": "Grand",
+        "clean_name": "Moab_0007"
+    },
+    {
+        "code": "0005",
+        "value_represented": "Enoch",
+        "county_code": "021",
+        "county_name": "Iron",
+        "clean_name": "Enoch_0005"
+    },
+    {
+        "code": "2005",
+        "value_represented": "Copper View",
+        "county_code": "035",
+        "county_name": "Salt Lake",
+        "clean_name": "Copper_View_2005"
+    },
+    {
+        "code": "3006",
+        "value_represented": "Hawthorne",
+        "county_code": "035",
+        "county_name": "Salt Lake",
+        "clean_name": "Hawthorne_3006"
+    },
+    {
+        "code": "3010",
+        "value_represented": "ROSE PARK",
+        "county_code": "035",
+        "county_name": "Salt Lake",
+        "clean_name": "ROSE_PARK_3010"
+    },
+    {
+        "code": "3013",
+        "value_represented": "Herriman #3",
+        "county_code": "035",
+        "county_name": "Salt Lake",
+        "clean_name": "Herriman__3_3013"
+    },
+    {
+        "code": "3014",
+        "value_represented": "Lake Park",
+        "county_code": "035",
+        "county_name": "Salt Lake",
+        "clean_name": "Lake_Park_3014"
+    },
+    {
+        "code": "3015",
+        "value_represented": "Utah Technical Center",
+        "county_code": "035",
+        "county_name": "Salt Lake",
+        "clean_name": "Utah_Technical_Center_3015"
+    },
+    {
+        "code": "3016",
+        "value_represented": "Inland Port",
+        "county_code": "035",
+        "county_name": "Salt Lake",
+        "clean_name": "Inland_Port_3016"
+    },
+    {
+        "code": "3018",
+        "value_represented": "Red Butte",
+        "county_code": "035",
+        "county_name": "Salt Lake",
+        "clean_name": "Red_Butte_3018"
+    },
+    {
+        "code": "4002",
+        "value_represented": "Near Road",
+        "county_code": "035",
+        "county_name": "Salt Lake",
+        "clean_name": "Near_Road_4002"
+    },
+    {
+        "code": "0004",
+        "value_represented": "Erda",
+        "county_code": "045",
+        "county_name": "Tooele",
+        "clean_name": "Erda_0004"
+    },
+    {
+        "code": "1004",
+        "value_represented": "Vernal #4",
+        "county_code": "047",
+        "county_name": "Uintah",
+        "clean_name": "Vernal__4_1004"
+    },
+    {
+        "code": "2002",
+        "value_represented": null,
+        "county_code": "047",
+        "county_name": "Uintah",
+        "clean_name": "Site_2002_2002"
+    },
+    {
+        "code": "2003",
+        "value_represented": null,
+        "county_code": "047",
+        "county_name": "Uintah",
+        "clean_name": "Site_2003_2003"
+    },
+    {
+        "code": "5632",
+        "value_represented": null,
+        "county_code": "047",
+        "county_name": "Uintah",
+        "clean_name": "Site_5632_5632"
+    },
+    {
+        "code": "7022",
+        "value_represented": "STATION NEAR INTERSECTION OF WHITEROCK CANYON RD & QURAY CANAL",
+        "county_code": "047",
+        "county_name": "Uintah",
+        "clean_name": "STATION_NEAR_INTERSECTION_OF_WHITEROCK_CANYON_RD___QURAY_CANAL_7022"
+    },
+    {
+        "code": "4001",
+        "value_represented": "Lindon",
+        "county_code": "049",
+        "county_name": "Utah",
+        "clean_name": "Lindon_4001"
+    },
+    {
+        "code": "5010",
+        "value_represented": "Spanish Fork",
+        "county_code": "049",
+        "county_name": "Utah",
+        "clean_name": "Spanish_Fork_5010"
+    },
+    {
+        "code": "0001",
+        "value_represented": "Heber",
+        "county_code": "051",
+        "county_name": "Wasatch",
+        "clean_name": "Heber_0001"
+    },
+    {
+        "code": "0007",
+        "value_represented": "Hurricane",
+        "county_code": "053",
+        "county_name": "Washington",
+        "clean_name": "Hurricane_0007"
+    },
+    {
+        "code": "1003",
+        "value_represented": "Harrisville",
+        "county_code": "057",
+        "county_name": "Weber",
+        "clean_name": "Harrisville_1003"
+    }
+]

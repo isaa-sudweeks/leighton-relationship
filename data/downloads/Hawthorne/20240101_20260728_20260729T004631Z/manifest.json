@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "download_id": "20240101_20260728_20260729T004631Z",
+  "downloaded_at_utc": "2026-07-29T00:46:32.319956+00:00",
+  "site_name": "Hawthorne",
+  "state_code": "49",
+  "county_code": "035",
+  "site_id": "3006",
+  "start_date": "2024-01-01",
+  "end_date": "2026-07-28",
+  "parameter_codes": [
+    "44201",
+    "42601",
+    "42602",
+    "63301",
+    "62101",
+    "63302"
+  ],
+  "returned_parameter_codes": [
+    "42601",
+    "42602",
+    "44201",
+    "62101",
+    "63301"
+  ],
+  "missing_parameter_codes": [
+    "63302"
+  ],
+  "parameter_batches": [
+    [
+      "44201",
+      "42601",
+      "42602",
+      "63301",
+      "62101"
+    ],
+    [
+      "63302"
+    ]
+  ],
+  "sample_rows": 175104,
+  "missing_measurement_rows": 4110,
+  "first_observation_utc": "2024-01-01T07:00:00+00:00",
+  "last_observation_utc": "2026-07-01T06:00:00+00:00",
+  "monitor_inventory_rows": 8,
+  "samples_file": "aqs_samples.parquet",
+  "monitor_inventory_file": "monitor_inventory.parquet"
+}
