@@ -5,8 +5,9 @@ POC-resolved AQS analysis table, joins the Hawthorne UV series, performs the
 same kinetic and concentration calculations, and exports reviewed figures and
 processed data.
 
-The J(NO2) calibration constants and fixed pressure reproduce the archived
-notebook and remain scientific assumptions to validate independently.
+The J(NO2) calculation uses Callum Flowerday's provisional NCAR TUV transfer
+function from the August 14 and August 18, 2026 implementation emails. The
+fixed pressure remains an independently unvalidated scientific assumption.
 """
 
 from __future__ import annotations
@@ -34,17 +35,26 @@ DEFAULT_AQS_PATH = Path(
 DEFAULT_UV_PATH = Path("data/UV Data/UV Data All Time HW LP RB.csv")
 DEFAULT_OUTPUT_DIR = Path("output/leighton_analysis")
 
-# Archived-notebook assumptions.
+# Kinetic and concentration assumptions retained from the archived notebook.
 REACTION_PREFACTOR = 3.0e-12
 ACTIVATION_OVER_R = 1500.0
-J_CALIBRATION_CONSTANT = 7.784e-5
-UV_SENSOR_AREA_CM2 = 2.84
-J_SCALE_FACTOR = 10.0
 PRESSURE_PA = 87_000.0
 BOLTZMANN_J_PER_K = 1.380649e-23
 F298 = 1.07
 G_TEMPERATURE = 130.0
 LANGLEY_PER_MINUTE_TO_W_M2 = 41_840.0 / 60.0
+
+# Provisional state-UV transfer function from Callum Flowerday's August 14,
+# 2026 email, with the August 18 correction that it replaces the complete
+# archived ``7.784e-5 * UV / 2.84 * 10`` expression. UV is in W m^-2, solar
+# zenith angle is in degrees, and J(NO2) is in s^-1.
+TUV_SZA_INTERCEPT_M2_W_S = 1.538e-4
+TUV_SZA_SLOPE_M2_W_S_DEG = 1.951e-6
+J_CALIBRATION_SOURCE = "Callum Flowerday emails dated 2026-08-14 and 2026-08-18"
+
+# Hawthorne AQS site 49-035-3006 coordinates from the source AQS snapshot.
+HAWTHORNE_LATITUDE_DEG = 40.736389
+HAWTHORNE_LONGITUDE_DEG = -111.872222
 
 REQUIRED_MEASUREMENTS = ["UV", "NO", "NO2", "O3", "Temp"]
 EXPECTED_POCS = {"NO": 2, "NO2": 3, "O3": 1, "SR": 1, "Temp": 1}
@@ -55,14 +65,85 @@ class AnalysisConfig:
     year: int = 2025
     month: int = 5
     minimum_uv: float = 10.0
-    daytime_start: str = "09:00"
+    daytime_start: str = "10:00"
     daytime_end: str = "16:00"
+    minimum_no_ppb: float = 0.10
+    site_latitude_deg: float = HAWTHORNE_LATITUDE_DEG
+    site_longitude_deg: float = HAWTHORNE_LONGITUDE_DEG
     apply_sr_ci: bool = False
     sr_threshold_w_m2: float = 710.0
     clearing_index_threshold: int = 1000
     target_airshed: str = "Northern Wasatch Front"
     uv_hour_shift: int | None = None
     uv_alignment_max_shift: int = 3
+
+
+def calculate_solar_zenith_angle(
+    datetime_utc: pd.Series,
+    latitude_deg: float,
+    longitude_deg: float,
+) -> pd.Series:
+    """Calculate solar zenith angle with the NOAA solar equations."""
+    timestamps = pd.to_datetime(datetime_utc, utc=True, errors="coerce")
+    if timestamps.isna().any():
+        raise ValueError("SZA calculation requires valid UTC timestamps")
+
+    day_of_year = timestamps.dt.dayofyear.to_numpy(dtype=float)
+    fractional_hour = (
+        timestamps.dt.hour.to_numpy(dtype=float)
+        + timestamps.dt.minute.to_numpy(dtype=float) / 60.0
+        + timestamps.dt.second.to_numpy(dtype=float) / 3600.0
+    )
+    fractional_year = (
+        2.0
+        * np.pi
+        / 365.0
+        * (day_of_year - 1.0 + (fractional_hour - 12.0) / 24.0)
+    )
+    equation_of_time_minutes = 229.18 * (
+        0.000075
+        + 0.001868 * np.cos(fractional_year)
+        - 0.032077 * np.sin(fractional_year)
+        - 0.014615 * np.cos(2.0 * fractional_year)
+        - 0.040849 * np.sin(2.0 * fractional_year)
+    )
+    declination_rad = (
+        0.006918
+        - 0.399912 * np.cos(fractional_year)
+        + 0.070257 * np.sin(fractional_year)
+        - 0.006758 * np.cos(2.0 * fractional_year)
+        + 0.000907 * np.sin(2.0 * fractional_year)
+        - 0.002697 * np.cos(3.0 * fractional_year)
+        + 0.00148 * np.sin(3.0 * fractional_year)
+    )
+    true_solar_time_minutes = np.mod(
+        fractional_hour * 60.0
+        + equation_of_time_minutes
+        + 4.0 * longitude_deg,
+        1440.0,
+    )
+    hour_angle_rad = np.deg2rad(true_solar_time_minutes / 4.0 - 180.0)
+    latitude_rad = np.deg2rad(latitude_deg)
+    cosine_zenith = (
+        np.sin(latitude_rad) * np.sin(declination_rad)
+        + np.cos(latitude_rad)
+        * np.cos(declination_rad)
+        * np.cos(hour_angle_rad)
+    )
+    zenith_deg = np.rad2deg(np.arccos(np.clip(cosine_zenith, -1.0, 1.0)))
+    return pd.Series(zenith_deg, index=datetime_utc.index, dtype=float)
+
+
+def calculate_tuv_j_no2(
+    uv_w_m2: pd.Series,
+    solar_zenith_angle_deg: pd.Series,
+) -> tuple[pd.Series, pd.Series]:
+    """Apply Callum's provisional SZA-dependent TUV transfer function."""
+    coefficient = (
+        TUV_SZA_INTERCEPT_M2_W_S
+        + TUV_SZA_SLOPE_M2_W_S_DEG * solar_zenith_angle_deg
+    )
+    return coefficient * uv_w_m2, coefficient
 
 
 def evaluate_uv_alignment(
@@ -185,6 +266,21 @@ def load_selected_measurements(
     if data.empty:
         raise ValueError("No rows remain after the declared analysis filters")
 
+    in_primary_window = data.between_time(
+        config.daytime_start,
+        config.daytime_end,
+        inclusive="both",
+    )
+    accounting["primary_time_window_rows"] = len(in_primary_window)
+    data = in_primary_window.loc[
+        in_primary_window["NO"].ge(config.minimum_no_ppb)
+    ].copy()
+    accounting["primary_no_threshold_rows"] = len(data)
+    if data.empty:
+        raise ValueError(
+            "No rows remain after the primary time-window and NO filters"
+        )
+
     data["SR_W_m2"] = data["SR"] * LANGLEY_PER_MINUTE_TO_W_M2
     if config.apply_sr_ci:
         accounting["sr_threshold_rows"] = int(
@@ -206,8 +302,12 @@ def load_selected_measurements(
     return data, accounting
 
 
-def calculate_leighton_ratio(data: pd.DataFrame) -> pd.DataFrame:
-    """Reproduce the archived notebook's physical calculations."""
+def calculate_leighton_ratio(
+    data: pd.DataFrame,
+    config: AnalysisConfig | None = None,
+) -> pd.DataFrame:
+    """Calculate J(NO2), concentrations, and the Leighton ratio."""
+    config = config or AnalysisConfig()
     result = data.copy()
     result["Temp_K"] = (result["Temp"] - 32.0) * (5.0 / 9.0) + 273.15
     result["K"] = REACTION_PREFACTOR * np.exp(
@@ -216,12 +316,18 @@ def calculate_leighton_ratio(data: pd.DataFrame) -> pd.DataFrame:
     result["f_T"] = F298 * np.exp(
         G_TEMPERATURE * (1.0 / result["Temp_K"] - 1.0 / 298.0)
     )
-    result["J"] = (
-        J_CALIBRATION_CONSTANT
-        * result["UV"]
-        / UV_SENSOR_AREA_CM2
-        * J_SCALE_FACTOR
+    if "datetime_utc" not in result:
+        raise ValueError("J(NO2) calculation requires datetime_utc")
+    result["solar_zenith_angle_deg"] = calculate_solar_zenith_angle(
+        result["datetime_utc"],
+        config.site_latitude_deg,
+        config.site_longitude_deg,
     )
+    result["J"], result["j_conversion_coefficient_m2_w_s"] = calculate_tuv_j_no2(
+        result["UV"],
+        result["solar_zenith_angle_deg"],
+    )
+    result["j_calibration_method"] = "provisional_tuv_sza_linear"
 
     number_density = (
         PRESSURE_PA / (BOLTZMANN_J_PER_K * result["Temp_K"])
@@ -242,6 +348,7 @@ def calculate_leighton_ratio(data: pd.DataFrame) -> pd.DataFrame:
     result = result.dropna(subset=["LR"])
     if result.empty:
         raise ValueError("No finite Leighton-ratio values were calculated")
+    result["log10_LR"] = np.log10(result["LR"])
     return result
 
 
@@ -300,7 +407,10 @@ def plot_ratio_timeseries(
         color="#111827",
         pad=18,
     )
-    filter_text = f"UV > {config.minimum_uv:g}"
+    filter_text = (
+        f"UV > {config.minimum_uv:g} W/m² · NO ≥ {config.minimum_no_ppb:g} ppb · "
+        f"{config.daytime_start}–{config.daytime_end} LST"
+    )
     if config.apply_sr_ci:
         filter_text += (
             f" · SR ≥ {config.sr_threshold_w_m2:g} W/m²"
@@ -329,7 +439,7 @@ def plot_ratio_timeseries(
     fig.text(
         0.985,
         0.025,
-        "J(NO₂) calibration and fixed 87 kPa pressure reproduce archived assumptions.",
+        "J(NO₂) uses the provisional TUV/SZA transfer function; pressure is fixed at 87 kPa.",
         ha="right",
         va="bottom",
         fontsize=8,
@@ -541,6 +651,12 @@ def summarize(
             "minimum_uv": config.minimum_uv,
             "daytime_start": config.daytime_start,
             "daytime_end": config.daytime_end,
+            "time_window_inclusive": "both",
+            "time_standard": "local_standard_time",
+            "minimum_no_ppb": config.minimum_no_ppb,
+            "minimum_no_operator": ">=",
+            "site_latitude_deg": config.site_latitude_deg,
+            "site_longitude_deg": config.site_longitude_deg,
             "poc_selections": EXPECTED_POCS,
             "apply_sr_ci": config.apply_sr_ci,
             "sr_threshold_w_m2": config.sr_threshold_w_m2,
@@ -554,9 +670,15 @@ def summarize(
         "daytime_window": statistics(daytime),
         "outside_window": statistics(outside),
         "scientific_assumptions_to_validate": {
-            "j_calibration_constant": J_CALIBRATION_CONSTANT,
-            "uv_sensor_area_cm2": UV_SENSOR_AREA_CM2,
-            "j_scale_factor": J_SCALE_FACTOR,
+            "j_calibration_method": "provisional_tuv_sza_linear",
+            "j_calibration_source": J_CALIBRATION_SOURCE,
+            "uv_units": "W m^-2",
+            "solar_zenith_angle_units": "degrees",
+            "j_units": "s^-1",
+            "tuv_sza_intercept_m2_w_s": TUV_SZA_INTERCEPT_M2_W_S,
+            "tuv_sza_slope_m2_w_s_deg": TUV_SZA_SLOPE_M2_W_S_DEG,
+            "sza_method": "NOAA fractional-year solar-position approximation",
+            "state_uv_area_or_scale_correction": "none",
             "fixed_pressure_pa": PRESSURE_PA,
             "timestamp_join": (
                 "UV timestamp shifted by the selected integer-hour lag, then "
@@ -575,7 +697,7 @@ def run_analysis(
     """Run the full analysis and export data, summaries, and figures."""
     output_dir.mkdir(parents=True, exist_ok=True)
     data, accounting = load_selected_measurements(aqs_path, uv_path, config)
-    data = calculate_leighton_ratio(data)
+    data = calculate_leighton_ratio(data, config)
     accounting["finite_ratio_rows"] = len(data)
     daytime, outside = split_time_windows(data, config)
 

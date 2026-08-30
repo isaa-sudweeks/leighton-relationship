@@ -92,6 +92,22 @@ It writes the processed May 2025 dataset, a JSON summary, the Leighton-ratio
 time series, non-overlapping clock-window distributions, and the temperature
 correction plot under `output/leighton_analysis/`.
 
+The primary calculation uses Hawthorne local standard time from 10:00 through
+16:00 (inclusive) and requires NO >= 0.10 ppb, following the August 14 and 18,
+2026 implementation instructions. State UV values are treated as calibrated
+W/m^2 irradiance. J(NO2) is calculated with the provisional NCAR TUV transfer
+function
+
+```text
+C(SZA) = 1.538e-4 + 1.951e-6 * SZA
+J(NO2) = C(SZA) * UV
+```
+
+where SZA is in degrees and J(NO2) is in s^-1. The output Parquet preserves
+SZA, the applied coefficient, J(NO2), LR, and log10(LR); `summary.json` records
+the coefficient parameters and provenance. This replaces the complete legacy
+`7.784e-5 * UV / 2.84 * 10` expression rather than adding another scale factor.
+
 Apply the collocated AQS solar-radiation and Northern Wasatch Front
 clearing-index filters with:
 
