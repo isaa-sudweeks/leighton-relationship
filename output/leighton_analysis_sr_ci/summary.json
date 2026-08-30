@@ -3,8 +3,14 @@
     "year": 2025,
     "month": 5,
     "minimum_uv": 10.0,
-    "daytime_start": "09:00",
+    "daytime_start": "10:00",
     "daytime_end": "16:00",
+    "time_window_inclusive": "both",
+    "time_standard": "local_standard_time",
+    "minimum_no_ppb": 0.2,
+    "minimum_no_operator": ">",
+    "site_latitude_deg": 40.736389,
+    "site_longitude_deg": -111.872222,
     "poc_selections": {
       "NO": 2,
       "NO2": 3,
@@ -15,34 +21,77 @@
     "apply_sr_ci": true,
     "sr_threshold_w_m2": 710.0,
     "clearing_index_threshold": 1000,
-    "target_airshed": "Northern Wasatch Front"
+    "target_airshed": "Northern Wasatch Front",
+    "uv_hour_shift": null,
+    "uv_alignment_max_shift": 3
   },
   "row_accounting": {
     "aqs_rows": 21888,
+    "uv_alignment_method": "maximum_UV_SR_Pearson_correlation",
+    "uv_selected_shift_hours": 0,
+    "uv_alignment_candidates": [
+      {
+        "shift_hours": -3,
+        "paired_rows": 234,
+        "uv_sr_pearson_r": 0.44685327816943166
+      },
+      {
+        "shift_hours": -2,
+        "paired_rows": 233,
+        "uv_sr_pearson_r": 0.6952384410185593
+      },
+      {
+        "shift_hours": -1,
+        "paired_rows": 232,
+        "uv_sr_pearson_r": 0.9004950909688353
+      },
+      {
+        "shift_hours": 0,
+        "paired_rows": 231,
+        "uv_sr_pearson_r": 0.9946436097148282
+      },
+      {
+        "shift_hours": 1,
+        "paired_rows": 230,
+        "uv_sr_pearson_r": 0.888998116434918
+      },
+      {
+        "shift_hours": 2,
+        "paired_rows": 229,
+        "uv_sr_pearson_r": 0.6726034292484141
+      },
+      {
+        "shift_hours": 3,
+        "paired_rows": 228,
+        "uv_sr_pearson_r": 0.40458034375804247
+      }
+    ],
     "exact_uv_matches": 15552,
     "period_rows": 744,
     "uv_threshold_rows": 123,
     "base_analysis_rows": 74,
-    "sr_threshold_rows": 43,
-    "sr_ci_filtered_rows": 32,
-    "analysis_rows": 32,
-    "finite_ratio_rows": 32
+    "primary_time_window_rows": 50,
+    "primary_no_threshold_rows": 14,
+    "sr_threshold_rows": 34,
+    "sr_ci_filtered_rows": 25,
+    "analysis_rows": 14,
+    "finite_ratio_rows": 14
   },
   "all_observations": {
-    "count": 32,
-    "median": 2.355281896798399,
-    "p10": 1.1787800950760972,
-    "p90": 5.91311842204832,
-    "minimum": 0.9419217210324217,
-    "maximum": 7.039181981913279
+    "count": 14,
+    "median": 1.5107139377786267,
+    "p10": 1.0139188817666245,
+    "p90": 1.9538764465093046,
+    "minimum": 0.9642056284509039,
+    "maximum": 2.143742631039085
   },
   "daytime_window": {
-    "count": 32,
-    "median": 2.355281896798399,
-    "p10": 1.1787800950760972,
-    "p90": 5.91311842204832,
-    "minimum": 0.9419217210324217,
-    "maximum": 7.039181981913279
+    "count": 14,
+    "median": 1.5107139377786267,
+    "p10": 1.0139188817666245,
+    "p90": 1.9538764465093046,
+    "minimum": 0.9642056284509039,
+    "maximum": 2.143742631039085
   },
   "outside_window": {
     "count": 0,
@@ -53,10 +102,89 @@
     "maximum": null
   },
   "scientific_assumptions_to_validate": {
-    "j_calibration_constant": 7.784e-05,
-    "uv_sensor_area_cm2": 2.84,
-    "j_scale_factor": 10.0,
+    "j_calibration_method": "provisional_tuv_sza_linear",
+    "j_calibration_source": "Callum Flowerday emails dated 2026-08-14 and 2026-08-18",
+    "uv_units": "W m^-2",
+    "solar_zenith_angle_units": "degrees",
+    "j_units": "s^-1",
+    "tuv_sza_intercept_m2_w_s": 0.0001538,
+    "tuv_sza_slope_m2_w_s_deg": 1.951e-06,
+    "sza_method": "NOAA fractional-year solar-position approximation",
+    "state_uv_area_or_scale_correction": "none",
     "fixed_pressure_pa": 87000.0,
-    "timestamp_join": "exact naive Local Standard Time to UV timestamp"
-  }
+    "timestamp_join": "UV timestamp shifted by the selected integer-hour lag, then matched exactly to AQS Local Standard Time"
+  },
+  "uncertainty": {
+    "status": "partial_quantified_uncertainty",
+    "sensor_model": "Apogee SU-200-SS",
+    "geometry": "normal May 21 geometry supplied by Callum",
+    "quantified_relative_components": {
+      "calibration": 0.05,
+      "repeatability": 0.005,
+      "non_linearity": 0.01,
+      "cosine_response": 0.02
+    },
+    "combined_quantified_relative_uncertainty": 0.055,
+    "combination_method": "root_sum_of_squares_assuming_independence",
+    "unquantified_terms": [
+      "NO measurement",
+      "NO2 measurement",
+      "O3 measurement",
+      "temperature and K",
+      "NO2 quantum yield",
+      "NO2 absorption cross section",
+      "long-term sensor drift for the measurement date"
+    ],
+    "plot_interval_label": "partial quantified uncertainty"
+  },
+  "no_threshold_sensitivity": [
+    {
+      "minimum_no_ppb": 0.0,
+      "operator": ">",
+      "count": 25,
+      "median_lr": 2.0244932275402587,
+      "p90_lr": 4.415841593961169,
+      "max_lr": 5.034923924214826
+    },
+    {
+      "minimum_no_ppb": 0.05,
+      "operator": ">",
+      "count": 25,
+      "median_lr": 2.0244932275402587,
+      "p90_lr": 4.415841593961169,
+      "max_lr": 5.034923924214826
+    },
+    {
+      "minimum_no_ppb": 0.1,
+      "operator": ">",
+      "count": 18,
+      "median_lr": 1.5492245799518571,
+      "p90_lr": 2.8525290053768466,
+      "max_lr": 2.9837882111552845
+    },
+    {
+      "minimum_no_ppb": 0.2,
+      "operator": ">",
+      "count": 14,
+      "median_lr": 1.5107139377786267,
+      "p90_lr": 1.9538764465093046,
+      "max_lr": 2.143742631039085
+    },
+    {
+      "minimum_no_ppb": 0.5,
+      "operator": ">",
+      "count": 9,
+      "median_lr": 1.2087132570347376,
+      "p90_lr": 1.5226911351242565,
+      "max_lr": 1.545280818028379
+    },
+    {
+      "minimum_no_ppb": 1.0,
+      "operator": ">",
+      "count": 3,
+      "median_lr": 0.977669778066985,
+      "p90_lr": 1.074334054599357,
+      "max_lr": 1.0985001237324499
+    }
+  ]
 }

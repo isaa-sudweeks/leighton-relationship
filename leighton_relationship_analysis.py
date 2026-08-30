@@ -16,6 +16,7 @@ import argparse
 from dataclasses import dataclass
 import json
 from pathlib import Path
+from typing import Literal
 
 import matplotlib
 
@@ -25,6 +26,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from lr_uncertainty import (
+    APOGEE_SU200_MAY21_RELATIVE_UNCERTAINTIES,
+    CURRENTLY_UNQUANTIFIED_TERMS,
+    add_quantified_lr_uncertainty,
+    apogee_su200_may21_relative_uncertainty,
+)
 from sr_ci_filter import apply_sr_ci_filters
 
 
@@ -58,6 +65,7 @@ HAWTHORNE_LONGITUDE_DEG = -111.872222
 
 REQUIRED_MEASUREMENTS = ["UV", "NO", "NO2", "O3", "Temp"]
 EXPECTED_POCS = {"NO": 2, "NO2": 3, "O3": 1, "SR": 1, "Temp": 1}
+NO_SENSITIVITY_THRESHOLDS_PPB = (0.0, 0.05, 0.10, 0.20, 0.50, 1.0)
 
 
 @dataclass(frozen=True)
@@ -67,7 +75,8 @@ class AnalysisConfig:
     minimum_uv: float = 10.0
     daytime_start: str = "10:00"
     daytime_end: str = "16:00"
-    minimum_no_ppb: float = 0.10
+    minimum_no_ppb: float = 0.20
+    minimum_no_operator: Literal[">", ">="] = ">"
     site_latitude_deg: float = HAWTHORNE_LATITUDE_DEG
     site_longitude_deg: float = HAWTHORNE_LONGITUDE_DEG
     apply_sr_ci: bool = False
@@ -206,6 +215,7 @@ def load_selected_measurements(
     aqs_path: Path,
     uv_path: Path,
     config: AnalysisConfig,
+    apply_primary_no_filter: bool = True,
 ) -> tuple[pd.DataFrame, dict[str, object]]:
     """Load selected POCs, join UV, and apply declared analysis filters."""
     aqs = pd.read_parquet(aqs_path)
@@ -272,10 +282,17 @@ def load_selected_measurements(
         inclusive="both",
     )
     accounting["primary_time_window_rows"] = len(in_primary_window)
-    data = in_primary_window.loc[
-        in_primary_window["NO"].ge(config.minimum_no_ppb)
-    ].copy()
-    accounting["primary_no_threshold_rows"] = len(data)
+    no_mask = apply_no_threshold(
+        in_primary_window["NO"],
+        config.minimum_no_ppb,
+        config.minimum_no_operator,
+    )
+    accounting["primary_no_threshold_rows"] = int(no_mask.sum())
+    data = (
+        in_primary_window.loc[no_mask].copy()
+        if apply_primary_no_filter
+        else in_primary_window.copy()
+    )
     if data.empty:
         raise ValueError(
             "No rows remain after the primary time-window and NO filters"
@@ -300,6 +317,40 @@ def load_selected_measurements(
 
     accounting["analysis_rows"] = len(data)
     return data, accounting
+
+
+def apply_no_threshold(
+    no_ppb: pd.Series,
+    threshold_ppb: float,
+    operator: Literal[">", ">="],
+) -> pd.Series:
+    """Return the declared NO-threshold mask without modifying source values."""
+    if operator == ">":
+        return no_ppb.gt(threshold_ppb)
+    if operator == ">=":
+        return no_ppb.ge(threshold_ppb)
+    raise ValueError(f"Unsupported minimum NO operator: {operator!r}")
+
+
+def summarize_no_threshold_sensitivity(
+    data: pd.DataFrame,
+    thresholds_ppb: tuple[float, ...] = NO_SENSITIVITY_THRESHOLDS_PPB,
+) -> pd.DataFrame:
+    """Summarize LR under strict NO cutoffs for a reproducible sensitivity table."""
+    rows = []
+    for threshold in thresholds_ppb:
+        selected = data.loc[data["NO"].gt(threshold), "LR"]
+        rows.append(
+            {
+                "minimum_no_ppb": threshold,
+                "operator": ">",
+                "count": int(selected.count()),
+                "median_lr": float(selected.median()) if not selected.empty else None,
+                "p90_lr": float(selected.quantile(0.90)) if not selected.empty else None,
+                "max_lr": float(selected.max()) if not selected.empty else None,
+            }
+        )
+    return pd.DataFrame(rows)
 
 
 def calculate_leighton_ratio(
@@ -349,6 +400,17 @@ def calculate_leighton_ratio(
     if result.empty:
         raise ValueError("No finite Leighton-ratio values were calculated")
     result["log10_LR"] = np.log10(result["LR"])
+    result["apogee_su200_may21_relative_uncertainty"] = (
+        apogee_su200_may21_relative_uncertainty()
+    )
+    result = add_quantified_lr_uncertainty(
+        result,
+        {
+            "Apogee SU-200-SS supplied May 21 components": (
+                "apogee_su200_may21_relative_uncertainty"
+            )
+        },
+    )
     return result
 
 
@@ -382,15 +444,20 @@ def plot_ratio_timeseries(
     """Plot the calculated ratio by observation time."""
     fig, axis = plt.subplots(figsize=(11, 6.2))
     fig.subplots_adjust(left=0.09, right=0.985, top=0.84, bottom=0.18)
-    axis.scatter(
+    axis.errorbar(
         data.index,
         data["LR"],
+        yerr=data["LR_quantified_absolute_uncertainty"],
+        fmt="o",
         color="#D97706",
-        edgecolor="#92400E",
-        linewidth=0.45,
-        s=42,
+        ecolor="#F59E0B",
+        markeredgecolor="#92400E",
+        markeredgewidth=0.45,
+        markersize=6.5,
+        elinewidth=0.8,
+        capsize=2,
         alpha=0.82,
-        label="Hourly observation",
+        label="Hourly observation with partial quantified uncertainty",
     )
     axis.axhline(
         1.0,
@@ -408,7 +475,8 @@ def plot_ratio_timeseries(
         pad=18,
     )
     filter_text = (
-        f"UV > {config.minimum_uv:g} W/m² · NO ≥ {config.minimum_no_ppb:g} ppb · "
+        f"UV > {config.minimum_uv:g} W/m² · NO {config.minimum_no_operator} "
+        f"{config.minimum_no_ppb:g} ppb · "
         f"{config.daytime_start}–{config.daytime_end} LST"
     )
     if config.apply_sr_ci:
@@ -439,7 +507,7 @@ def plot_ratio_timeseries(
     fig.text(
         0.985,
         0.025,
-        "J(NO₂) uses the provisional TUV/SZA transfer function; pressure is fixed at 87 kPa.",
+        "Error bars show only the quantified Apogee contribution (5.5%); full LR uncertainty is unavailable.",
         ha="right",
         va="bottom",
         fontsize=8,
@@ -654,7 +722,7 @@ def summarize(
             "time_window_inclusive": "both",
             "time_standard": "local_standard_time",
             "minimum_no_ppb": config.minimum_no_ppb,
-            "minimum_no_operator": ">=",
+            "minimum_no_operator": config.minimum_no_operator,
             "site_latitude_deg": config.site_latitude_deg,
             "site_longitude_deg": config.site_longitude_deg,
             "poc_selections": EXPECTED_POCS,
@@ -685,6 +753,20 @@ def summarize(
                 "matched exactly to AQS Local Standard Time"
             ),
         },
+        "uncertainty": {
+            "status": "partial_quantified_uncertainty",
+            "sensor_model": "Apogee SU-200-SS",
+            "geometry": "normal May 21 geometry supplied by Callum",
+            "quantified_relative_components": (
+                APOGEE_SU200_MAY21_RELATIVE_UNCERTAINTIES
+            ),
+            "combined_quantified_relative_uncertainty": (
+                apogee_su200_may21_relative_uncertainty()
+            ),
+            "combination_method": "root_sum_of_squares_assuming_independence",
+            "unquantified_terms": CURRENTLY_UNQUANTIFIED_TERMS,
+            "plot_interval_label": "partial quantified uncertainty",
+        },
     }
 
 
@@ -696,8 +778,24 @@ def run_analysis(
 ) -> dict[str, object]:
     """Run the full analysis and export data, summaries, and figures."""
     output_dir.mkdir(parents=True, exist_ok=True)
-    data, accounting = load_selected_measurements(aqs_path, uv_path, config)
-    data = calculate_leighton_ratio(data, config)
+    candidate_data, accounting = load_selected_measurements(
+        aqs_path,
+        uv_path,
+        config,
+        apply_primary_no_filter=False,
+    )
+    candidate_data = calculate_leighton_ratio(candidate_data, config)
+    sensitivity = summarize_no_threshold_sensitivity(candidate_data)
+    primary_mask = apply_no_threshold(
+        candidate_data["NO"],
+        config.minimum_no_ppb,
+        config.minimum_no_operator,
+    )
+    data = candidate_data.loc[primary_mask].copy()
+    accounting["primary_no_threshold_rows"] = len(data)
+    accounting["analysis_rows"] = len(data)
+    if data.empty:
+        raise ValueError("No rows remain after the primary NO filter")
     accounting["finite_ratio_rows"] = len(data)
     daytime, outside = split_time_windows(data, config)
 
@@ -707,9 +805,14 @@ def run_analysis(
     distributions_path = output_dir / "leighton_ratio_distributions.png"
     correction_path = output_dir / "temperature_correction.png"
     alignment_path = output_dir / "uv_alignment_diagnostic.png"
+    no_sensitivity_path = output_dir / "no_threshold_sensitivity.csv"
 
     data.reset_index().to_parquet(processed_path, index=False)
+    sensitivity.to_csv(no_sensitivity_path, index=False)
     summary = summarize(data, daytime, outside, accounting, config)
+    summary["no_threshold_sensitivity"] = sensitivity.replace(
+        {np.nan: None}
+    ).to_dict(orient="records")
     summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     plot_ratio_timeseries(data, config, timeseries_path)
     plot_ratio_distributions(daytime, outside, config, distributions_path)
@@ -747,6 +850,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--year", type=int, default=2025)
     parser.add_argument("--month", type=int, default=5)
     parser.add_argument("--minimum-uv", type=float, default=10.0)
+    parser.add_argument("--minimum-no", type=float, default=0.20)
+    parser.add_argument(
+        "--minimum-no-operator",
+        choices=(">", ">="),
+        default=">",
+        help="comparison used for the primary NO cutoff (default: strict >)",
+    )
     parser.add_argument(
         "--apply-sr-ci",
         action="store_true",
@@ -776,6 +886,8 @@ def main() -> None:
         year=args.year,
         month=args.month,
         minimum_uv=args.minimum_uv,
+        minimum_no_ppb=args.minimum_no,
+        minimum_no_operator=args.minimum_no_operator,
         apply_sr_ci=args.apply_sr_ci,
         sr_threshold_w_m2=args.sr_threshold,
         clearing_index_threshold=args.ci_threshold,

@@ -9,16 +9,51 @@ from leighton_relationship_analysis import (
     AnalysisConfig,
     TUV_SZA_INTERCEPT_M2_W_S,
     TUV_SZA_SLOPE_M2_W_S_DEG,
+    apply_no_threshold,
     calculate_leighton_ratio,
     calculate_solar_zenith_angle,
     calculate_tuv_j_no2,
     evaluate_uv_alignment,
     plot_ratio_distributions,
     split_time_windows,
+    summarize_no_threshold_sensitivity,
 )
 
 
 class LeightonAnalysisTests(unittest.TestCase):
+    def test_primary_no_cutoff_is_strict_at_point_20_ppb(self):
+        no_values = pd.Series([0.1999, 0.20, 0.2001, 0.50])
+
+        selected = apply_no_threshold(no_values, 0.20, ">")
+
+        self.assertEqual(selected.tolist(), [False, False, True, True])
+        self.assertEqual(AnalysisConfig().minimum_no_ppb, 0.20)
+        self.assertEqual(AnalysisConfig().minimum_no_operator, ">")
+
+    def test_no_cutoff_operator_is_configurable(self):
+        no_values = pd.Series([0.20, 0.21])
+
+        selected = apply_no_threshold(no_values, 0.20, ">=")
+
+        self.assertEqual(selected.tolist(), [True, True])
+
+    def test_no_threshold_sensitivity_uses_strict_cutoffs(self):
+        data = pd.DataFrame(
+            {
+                "NO": [0.0, 0.05, 0.10, 0.20, 0.50, 1.0, 2.0],
+                "LR": [10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0],
+            }
+        )
+
+        result = summarize_no_threshold_sensitivity(data)
+
+        self.assertEqual(result["operator"].unique().tolist(), [">"])
+        self.assertEqual(result["count"].tolist(), [6, 5, 4, 3, 2, 1])
+        point_two = result.loc[result["minimum_no_ppb"].eq(0.20)].iloc[0]
+        self.assertEqual(point_two["median_lr"], 5.0)
+        self.assertEqual(point_two["p90_lr"], 5.8)
+        self.assertEqual(point_two["max_lr"], 6.0)
+
     def test_calculation_retains_rows_with_missing_audit_columns(self):
         data = pd.DataFrame(
             {

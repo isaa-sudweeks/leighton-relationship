@@ -7,8 +7,8 @@
     "daytime_end": "16:00",
     "time_window_inclusive": "both",
     "time_standard": "local_standard_time",
-    "minimum_no_ppb": 0.1,
-    "minimum_no_operator": ">=",
+    "minimum_no_ppb": 0.2,
+    "minimum_no_operator": ">",
     "site_latitude_deg": 40.736389,
     "site_longitude_deg": -111.872222,
     "poc_selections": {
@@ -71,25 +71,25 @@
     "uv_threshold_rows": 123,
     "base_analysis_rows": 74,
     "primary_time_window_rows": 50,
-    "primary_no_threshold_rows": 50,
-    "analysis_rows": 50,
-    "finite_ratio_rows": 50
+    "primary_no_threshold_rows": 27,
+    "analysis_rows": 27,
+    "finite_ratio_rows": 27
   },
   "all_observations": {
-    "count": 50,
-    "median": 2.084117929289672,
-    "p10": 1.0636162577219346,
-    "p90": 4.303375801224845,
+    "count": 27,
+    "median": 1.3991004410366992,
+    "p10": 0.9912621901107042,
+    "p90": 1.8832596654783504,
     "minimum": 0.8716278029960485,
-    "maximum": 5.034923924214826
+    "maximum": 2.2101333450120926
   },
   "daytime_window": {
-    "count": 50,
-    "median": 2.084117929289672,
-    "p10": 1.0636162577219346,
-    "p90": 4.303375801224845,
+    "count": 27,
+    "median": 1.3991004410366992,
+    "p10": 0.9912621901107042,
+    "p90": 1.8832596654783504,
     "minimum": 0.8716278029960485,
-    "maximum": 5.034923924214826
+    "maximum": 2.2101333450120926
   },
   "outside_window": {
     "count": 0,
@@ -111,5 +111,78 @@
     "state_uv_area_or_scale_correction": "none",
     "fixed_pressure_pa": 87000.0,
     "timestamp_join": "UV timestamp shifted by the selected integer-hour lag, then matched exactly to AQS Local Standard Time"
-  }
+  },
+  "uncertainty": {
+    "status": "partial_quantified_uncertainty",
+    "sensor_model": "Apogee SU-200-SS",
+    "geometry": "normal May 21 geometry supplied by Callum",
+    "quantified_relative_components": {
+      "calibration": 0.05,
+      "repeatability": 0.005,
+      "non_linearity": 0.01,
+      "cosine_response": 0.02
+    },
+    "combined_quantified_relative_uncertainty": 0.055,
+    "combination_method": "root_sum_of_squares_assuming_independence",
+    "unquantified_terms": [
+      "NO measurement",
+      "NO2 measurement",
+      "O3 measurement",
+      "temperature and K",
+      "NO2 quantum yield",
+      "NO2 absorption cross section",
+      "long-term sensor drift for the measurement date"
+    ],
+    "plot_interval_label": "partial quantified uncertainty"
+  },
+  "no_threshold_sensitivity": [
+    {
+      "minimum_no_ppb": 0.0,
+      "operator": ">",
+      "count": 50,
+      "median_lr": 2.084117929289672,
+      "p90_lr": 4.303375801224845,
+      "max_lr": 5.034923924214826
+    },
+    {
+      "minimum_no_ppb": 0.05,
+      "operator": ">",
+      "count": 50,
+      "median_lr": 2.084117929289672,
+      "p90_lr": 4.303375801224845,
+      "max_lr": 5.034923924214826
+    },
+    {
+      "minimum_no_ppb": 0.1,
+      "operator": ">",
+      "count": 36,
+      "median_lr": 1.5492245799518571,
+      "p90_lr": 2.7618086516109894,
+      "max_lr": 2.9837882111552845
+    },
+    {
+      "minimum_no_ppb": 0.2,
+      "operator": ">",
+      "count": 27,
+      "median_lr": 1.3991004410366992,
+      "p90_lr": 1.8832596654783504,
+      "max_lr": 2.2101333450120926
+    },
+    {
+      "minimum_no_ppb": 0.5,
+      "operator": ">",
+      "count": 15,
+      "median_lr": 1.1195453066321712,
+      "p90_lr": 1.5119798931025465,
+      "max_lr": 1.545280818028379
+    },
+    {
+      "minimum_no_ppb": 1.0,
+      "operator": ">",
+      "count": 5,
+      "median_lr": 0.977669778066985,
+      "p90_lr": 1.0839773764116563,
+      "max_lr": 1.0985001237324499
+    }
+  ]
 }

@@ -93,7 +93,7 @@ time series, non-overlapping clock-window distributions, and the temperature
 correction plot under `output/leighton_analysis/`.
 
 The primary calculation uses Hawthorne local standard time from 10:00 through
-16:00 (inclusive) and requires NO >= 0.10 ppb, following the August 14 and 18,
+16:00 (inclusive) and requires strict NO > 0.20 ppb, following the August 14 and 18,
 2026 implementation instructions. State UV values are treated as calibrated
 W/m^2 irradiance. J(NO2) is calculated with the provisional NCAR TUV transfer
 function
@@ -107,6 +107,8 @@ where SZA is in degrees and J(NO2) is in s^-1. The output Parquet preserves
 SZA, the applied coefficient, J(NO2), LR, and log10(LR); `summary.json` records
 the coefficient parameters and provenance. This replaces the complete legacy
 `7.784e-5 * UV / 2.84 * 10` expression rather than adding another scale factor.
+Each run also writes `no_threshold_sensitivity.csv` for strict cutoffs at 0,
+0.05, 0.10, 0.20, 0.50, and 1.0 ppb.
 
 Apply the collocated AQS solar-radiation and Northern Wasatch Front
 clearing-index filters with:
@@ -116,3 +118,22 @@ python leighton_relationship_analysis.py \
   --apply-sr-ci \
   --output-dir output/leighton_analysis_sr_ci
 ```
+
+## Leighton-ratio uncertainty
+
+`lr_uncertainty.py` provides reusable independent-error propagation for
+`LR = J(NO2) * NO2 / (K * O3 * NO)`. For the normal May 21 geometry, the
+supplied Apogee SU-200-SS calibration (5%), repeatability (0.5%), non-linearity
+(1%), and cosine-response (2%) terms combine in quadrature to 5.5% (more
+precisely 5.50%). The individual components remain available in
+`APOGEE_SU200_MAY21_RELATIVE_UNCERTAINTIES` for auditability.
+
+This is currently a **partial quantified uncertainty**, not a complete LR
+uncertainty estimate. No values have been assumed for NO, NO2, or O3
+measurement uncertainty; temperature or rate-constant uncertainty; NO2
+quantum yield or absorption cross section; or date-specific long-term sensor
+drift. `add_quantified_lr_uncertainty` can combine fractional source
+uncertainty columns row by row when those values become available, while
+recording how many quantified components contributed to each row. Plot error
+bars should be labelled as partial quantified uncertainty until the remaining
+terms have defensible values.
