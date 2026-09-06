@@ -18,6 +18,23 @@ class DeliverablePackageTests(unittest.TestCase):
         self.assertIn("hourly_diagnostics_2024_06.parquet", artifacts)
         self.assertNotIn("leighton_ratio_may_2025.parquet", artifacts)
 
+    def test_expected_artifacts_support_available_year_outputs(self):
+        artifacts = expected_artifacts(
+            {
+                "configuration": {"year": 2025, "month": None},
+                "hourly_diagnostics": {
+                    "path": "hourly_diagnostics_2025_available_observations.parquet"
+                },
+            }
+        )
+
+        self.assertIn(
+            "leighton_ratio_2025_available_observations.parquet", artifacts
+        )
+        self.assertIn(
+            "hourly_diagnostics_2025_available_observations.parquet", artifacts
+        )
+
     def test_accepts_only_sr_ci_switch_difference(self):
         primary = {"configuration": {"year": 2025, "apply_sr_ci": False}}
         sensitivity = {"configuration": {"year": 2025, "apply_sr_ci": True}}

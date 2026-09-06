@@ -1,0 +1,247 @@
+{
+  "configuration": {
+    "year": 2024,
+    "month": null,
+    "period": "year_available_observations",
+    "minimum_uv": 10.0,
+    "daytime_start": "10:00",
+    "daytime_end": "16:00",
+    "time_window_inclusive": "both",
+    "time_standard": "local_standard_time",
+    "minimum_no_ppb": 0.2,
+    "minimum_no_operator": ">",
+    "site_latitude_deg": 40.736389,
+    "site_longitude_deg": -111.872222,
+    "poc_selections": {
+      "NO": 2,
+      "NO2": 3,
+      "O3": 1,
+      "SR": 1,
+      "Temp": 1
+    },
+    "apply_sr_ci": true,
+    "sr_threshold_w_m2": 710.0,
+    "clearing_index_threshold": 1000,
+    "target_airshed": "Northern Wasatch Front",
+    "uv_hour_shift": null,
+    "uv_alignment_max_shift": 3,
+    "tuv_qc_sza_min_deg": 19.74,
+    "tuv_qc_sza_max_deg": 50.47,
+    "ci_history_path": "output/leighton_audit_followup_2026-07-28/full_available_ci_history_air_shed_5.parquet"
+  },
+  "row_accounting": {
+    "aqs_rows": 21888,
+    "aqs_year_rows": 8784,
+    "aqs_year_min_timestamp": "2024-01-01 00:00:00",
+    "aqs_year_max_timestamp": "2024-12-31 23:00:00",
+    "uv_source_min_timestamp": "2023-04-20 00:00:00",
+    "uv_source_max_timestamp": "2025-10-09 23:00:00",
+    "uv_alignment_method": "maximum_UV_SR_Pearson_correlation",
+    "uv_selected_shift_hours": 0,
+    "uv_alignment_candidates": [
+      {
+        "shift_hours": -3,
+        "paired_rows": 4508,
+        "uv_sr_pearson_r": 0.43366575508508265
+      },
+      {
+        "shift_hours": -2,
+        "paired_rows": 4507,
+        "uv_sr_pearson_r": 0.6521773521867108
+      },
+      {
+        "shift_hours": -1,
+        "paired_rows": 4507,
+        "uv_sr_pearson_r": 0.850017987651937
+      },
+      {
+        "shift_hours": 0,
+        "paired_rows": 4508,
+        "uv_sr_pearson_r": 0.9508969328771516
+      },
+      {
+        "shift_hours": 1,
+        "paired_rows": 4507,
+        "uv_sr_pearson_r": 0.8488667422414936
+      },
+      {
+        "shift_hours": 2,
+        "paired_rows": 4507,
+        "uv_sr_pearson_r": 0.6669593508885312
+      },
+      {
+        "shift_hours": 3,
+        "paired_rows": 4507,
+        "uv_sr_pearson_r": 0.4404480036161801
+      }
+    ],
+    "exact_uv_matches": 15552,
+    "period_rows": 8784,
+    "matched_period_min_timestamp": "2024-01-01 00:00:00",
+    "matched_period_max_timestamp": "2024-12-31 23:00:00",
+    "uv_threshold_rows": 1642,
+    "base_analysis_rows": 1111,
+    "primary_time_window_rows": 871,
+    "primary_no_threshold_rows": 87,
+    "sr_threshold_rows": 375,
+    "ci_history_path": "output/leighton_audit_followup_2026-07-28/full_available_ci_history_air_shed_5.parquet",
+    "ci_history_rows": 357,
+    "ci_history_min_date": "2024-03-06",
+    "ci_history_max_date": "2025-10-04",
+    "sr_ci_row_accounting": {
+      "input_rows": 871,
+      "sr_qualified_rows": 375,
+      "missing_ci_rows": 107,
+      "qualified_lower_bound_rows": 165,
+      "retained_rows": 103
+    },
+    "sr_ci_filtered_rows": 103,
+    "analysis_rows": 87,
+    "finite_ratio_rows": 87
+  },
+  "coverage": {
+    "analysis_min_timestamp": "2024-03-08 12:00:00",
+    "analysis_max_timestamp": "2024-09-27 11:00:00",
+    "months_with_retained_observations": [
+      3,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "months_without_retained_observations": [
+      1,
+      2,
+      4,
+      10,
+      11,
+      12
+    ],
+    "all_calendar_months_have_retained_observations": false,
+    "label": "available observations only; not complete retained-month coverage",
+    "source_limitations": [
+      "State UV source ends at 2025-10-09 23:00:00",
+      "Rows are retained only when UV, NO, NO2, O3, and temperature are available and pass declared filters.",
+      "SR/CI coverage is additionally limited by the clearing-index archive; see sr_ci_row_accounting."
+    ]
+  },
+  "all_observations": {
+    "count": 87,
+    "median": 0.9044317563197483,
+    "p10": 0.2946773931459352,
+    "p90": 1.9835244843225908,
+    "minimum": 0.17760275650639898,
+    "maximum": 3.0044525413344108
+  },
+  "daytime_window": {
+    "count": 87,
+    "median": 0.9044317563197483,
+    "p10": 0.2946773931459352,
+    "p90": 1.9835244843225908,
+    "minimum": 0.17760275650639898,
+    "maximum": 3.0044525413344108
+  },
+  "outside_window": {
+    "count": 0,
+    "median": null,
+    "p10": null,
+    "p90": null,
+    "minimum": null,
+    "maximum": null
+  },
+  "scientific_assumptions_to_validate": {
+    "j_calibration_method": "provisional_tuv_sza_linear",
+    "j_calibration_source": "Callum Flowerday emails dated 2026-08-14 and 2026-08-18",
+    "uv_units": "W m^-2",
+    "solar_zenith_angle_units": "degrees",
+    "j_units": "s^-1",
+    "tuv_sza_intercept_m2_w_s": 0.0001538,
+    "tuv_sza_slope_m2_w_s_deg": 1.951e-06,
+    "tuv_provisional_qc_sza_range_deg": [
+      19.74,
+      50.47
+    ],
+    "tuv_sza_range_status": "provisional_pending_TUV_grid_confirmation",
+    "tuv_sza_range_basis": "reviewed May 2025 observation span",
+    "sza_extrapolated_rows": 4,
+    "sza_method": "NOAA fractional-year solar-position approximation",
+    "no_o3_rate_constant_method": "JPL_19-5_C19_non_arrhenius",
+    "no_o3_rate_constant_source": "JPL Evaluation 19-5 (2020), reaction C19",
+    "no_o3_prefactor_cm3_molecule_s": 3.32e-13,
+    "no_o3_temperature_exponent": 2.25,
+    "no_o3_activation_over_r_k": 850.0,
+    "no_o3_reference_temperature_k": 298.0,
+    "state_uv_area_or_scale_correction": "none",
+    "fixed_pressure_pa": 87000.0,
+    "timestamp_join": "UV timestamp shifted by the selected integer-hour lag, then matched exactly to AQS Local Standard Time"
+  },
+  "uncertainty": {
+    "status": "provisional_total_relative_uncertainty",
+    "source": "Callum Flowerday email dated 2026-08-31",
+    "quantified_relative_components": {
+      "UV measurement": 0.055,
+      "NO2 quantum yield": 0.04,
+      "NO2 absorption cross section": 0.1,
+      "NO measurement": 0.02,
+      "NO2 measurement": 0.02,
+      "NO + O3 kinetic term": 0.08,
+      "O3 measurement": 0.02
+    },
+    "components_rss_unrounded": 0.14908051515875576,
+    "combined_quantified_relative_uncertainty": 0.149,
+    "combination_method": "root_sum_of_squares_assuming_independence",
+    "plot_interval_label": "provisional 14.9% total LR uncertainty",
+    "row_level_method": "absolute uncertainty = abs(LR) * 0.149"
+  },
+  "no_threshold_sensitivity": [
+    {
+      "minimum_no_ppb": 0.0,
+      "operator": ">",
+      "count": 103,
+      "median_lr": 1.066582773280693,
+      "p90_lr": 2.9656325269658805,
+      "max_lr": 7.055579402634661
+    },
+    {
+      "minimum_no_ppb": 0.05,
+      "operator": ">",
+      "count": 103,
+      "median_lr": 1.066582773280693,
+      "p90_lr": 2.9656325269658805,
+      "max_lr": 7.055579402634661
+    },
+    {
+      "minimum_no_ppb": 0.1,
+      "operator": ">",
+      "count": 96,
+      "median_lr": 0.9654010258235842,
+      "p90_lr": 2.5056619241484333,
+      "max_lr": 3.9792241808355033
+    },
+    {
+      "minimum_no_ppb": 0.2,
+      "operator": ">",
+      "count": 87,
+      "median_lr": 0.9044317563197483,
+      "p90_lr": 1.9835244843225908,
+      "max_lr": 3.0044525413344108
+    },
+    {
+      "minimum_no_ppb": 0.5,
+      "operator": ">",
+      "count": 72,
+      "median_lr": 0.6454864941530041,
+      "p90_lr": 1.5244943897895593,
+      "max_lr": 1.8626935570317518
+    },
+    {
+      "minimum_no_ppb": 1.0,
+      "operator": ">",
+      "count": 55,
+      "median_lr": 0.5061849361067696,
+      "p90_lr": 1.0397352045161854,
+      "max_lr": 1.18168137497042
+    }
+  ]
+}

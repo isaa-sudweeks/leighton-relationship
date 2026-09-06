@@ -8,6 +8,10 @@ import pandas as pd
 
 from leighton_relationship_analysis import (
     AnalysisConfig,
+    JPL_NO_O3_ACTIVATION_OVER_R_K,
+    JPL_NO_O3_PREFACTOR,
+    JPL_NO_O3_REFERENCE_TEMPERATURE_K,
+    JPL_NO_O3_TEMPERATURE_EXPONENT,
     TUV_SZA_INTERCEPT_M2_W_S,
     TUV_SZA_SLOPE_M2_W_S_DEG,
     apply_no_threshold,
@@ -15,8 +19,10 @@ from leighton_relationship_analysis import (
     calculate_leighton_ratio,
     calculate_solar_zenith_angle,
     calculate_tuv_j_no2,
+    clear_stale_analysis_artifacts,
     evaluate_uv_alignment,
     plot_ratio_distributions,
+    period_label,
     run_analysis,
     split_time_windows,
     summarize_no_threshold_sensitivity,
@@ -24,6 +30,39 @@ from leighton_relationship_analysis import (
 
 
 class LeightonAnalysisTests(unittest.TestCase):
+    def test_stale_analysis_artifacts_are_cleared_across_period_modes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            monthly = output / "monthly"
+            monthly.mkdir()
+            stale = [
+                output / "leighton_ratio_2025_available_observations.parquet",
+                output / "hourly_diagnostics_2025_available_observations.parquet",
+                output / "monthly_summary.csv",
+                monthly / "2025-05_leighton_ratio_timeseries.png",
+                monthly / "2024-05_log10_leighton_ratio_timeseries.png",
+            ]
+            for path in stale:
+                path.write_text("stale", encoding="utf-8")
+            unrelated = output / "review_notes.md"
+            unrelated.write_text("keep", encoding="utf-8")
+
+            clear_stale_analysis_artifacts(output)
+
+            self.assertTrue(all(not path.exists() for path in stale))
+            self.assertFalse(monthly.exists())
+            self.assertEqual(unrelated.read_text(encoding="utf-8"), "keep")
+
+    def test_available_year_label_does_not_claim_complete_full_year(self):
+        self.assertEqual(
+            period_label(AnalysisConfig(year=2025, month=None)),
+            "2025 available observations",
+        )
+
+    def test_reversed_sza_qc_range_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "minimum must not exceed maximum"):
+            AnalysisConfig(tuv_qc_sza_min_deg=60.0, tuv_qc_sza_max_deg=20.0)
+
     def test_primary_no_cutoff_is_strict_at_point_20_ppb(self):
         no_values = pd.Series([0.1999, 0.20, 0.2001, 0.50])
 
@@ -124,6 +163,88 @@ class LeightonAnalysisTests(unittest.TestCase):
             result["j_calibration_method"].iloc[0],
             "provisional_tuv_sza_linear",
         )
+        self.assertIn("tuv_sza_extrapolated", result)
+
+    def test_jpl_19_5_non_arrhenius_rate_constant_is_used(self):
+        data = pd.DataFrame(
+            {
+                "Temp": [(298.0 - 273.15) * 9.0 / 5.0 + 32.0],
+                "UV": [20.0],
+                "O3": [0.05],
+                "NO": [1.0],
+                "NO2": [5.0],
+                "datetime_utc": pd.to_datetime(["2025-05-21 19:00Z"]),
+            },
+            index=pd.DatetimeIndex(["2025-05-21 12:00"]),
+        )
+
+        result = calculate_leighton_ratio(data)
+
+        expected = (
+            JPL_NO_O3_PREFACTOR
+            * (298.0 / JPL_NO_O3_REFERENCE_TEMPERATURE_K)
+            ** JPL_NO_O3_TEMPERATURE_EXPONENT
+            * math.exp(-JPL_NO_O3_ACTIVATION_OVER_R_K / 298.0)
+        )
+        self.assertAlmostEqual(result["K"].iloc[0], expected)
+        self.assertEqual(
+            result["k_no_o3_method"].iloc[0],
+            "JPL_19-5_C19_non_arrhenius",
+        )
+
+    def test_sza_extrapolation_is_flagged_without_dropping_rows(self):
+        data = pd.DataFrame(
+            {
+                "Temp": [70.0, 70.0],
+                "UV": [20.0, 20.0],
+                "O3": [0.05, 0.05],
+                "NO": [1.0, 1.0],
+                "NO2": [5.0, 5.0],
+                "datetime_utc": pd.to_datetime(
+                    ["2025-06-21 19:00Z", "2025-12-21 16:00Z"]
+                ),
+            },
+            index=pd.DatetimeIndex(["2025-06-21 12:00", "2025-12-21 09:00"]),
+        )
+
+        result = calculate_leighton_ratio(
+            data,
+            AnalysisConfig(
+                tuv_qc_sza_min_deg=20.0,
+                tuv_qc_sza_max_deg=50.0,
+            ),
+        )
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result["tuv_sza_extrapolated"].tolist(), [True, True])
+        self.assertTrue(result["J"].notna().all())
+
+    def test_provisional_uncertainty_is_row_level_fourteen_point_nine_percent(self):
+        data = pd.DataFrame(
+            {
+                "Temp": [70.0, 70.0],
+                "UV": [20.0, 20.0],
+                "O3": [0.05, 0.05],
+                "NO": [1.0, 0.5],
+                "NO2": [5.0, 5.0],
+                "datetime_utc": pd.to_datetime(
+                    ["2025-05-21 19:00Z", "2025-05-21 20:00Z"]
+                ),
+            },
+            index=pd.DatetimeIndex(["2025-05-21 12:00", "2025-05-21 13:00"]),
+        )
+
+        result = calculate_leighton_ratio(data)
+
+        self.assertTrue(
+            result["LR_quantified_relative_uncertainty"].eq(0.149).all()
+        )
+        expected = result["LR"].abs() * 0.149
+        pd.testing.assert_series_equal(
+            result["LR_quantified_absolute_uncertainty"],
+            expected,
+            check_names=False,
+        )
 
     def test_hourly_diagnostics_has_requested_schema_and_derived_nox(self):
         data = pd.DataFrame(
@@ -140,6 +261,7 @@ class LeightonAnalysisTests(unittest.TestCase):
                 "clearing_index": [850],
                 "LR": [1.5],
                 "log10_LR": [math.log10(1.5)],
+                "tuv_sza_extrapolated": [False],
             },
             index=pd.DatetimeIndex(
                 ["2025-06-01 12:00"], name="datetime_local_standard"
@@ -211,6 +333,7 @@ class LeightonAnalysisTests(unittest.TestCase):
                 "Temp": [70.0],
                 "LR": [1.5],
                 "log10_LR": [math.log10(1.5)],
+                "tuv_sza_extrapolated": [False],
             },
             index=index,
         )
@@ -229,6 +352,10 @@ class LeightonAnalysisTests(unittest.TestCase):
             return_value=calculated,
         ), patch(
             "leighton_relationship_analysis.plot_ratio_timeseries"
+        ), patch(
+            "leighton_relationship_analysis.plot_log_ratio_timeseries"
+        ), patch(
+            "leighton_relationship_analysis.plot_lr_relationship"
         ), patch(
             "leighton_relationship_analysis.plot_ratio_distributions"
         ), patch(

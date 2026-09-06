@@ -221,6 +221,7 @@ def apply_sr_ci_filters(
     target_airshed: int | str = "Northern Wasatch Front",
     local_timezone: str = "America/Denver",
     request_buffer_days: int = 2,
+    clearing_index_history: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Apply the Improved Isopleths SR and clearing-index cutoffs.
 
@@ -235,7 +236,15 @@ def apply_sr_ci_filters(
         raise TypeError("The dataframe must use a DatetimeIndex.")
 
     filtered = data[data[sr_column].ge(sr_threshold)].copy()
+    sr_qualified_rows = len(filtered)
     if filtered.empty:
+        filtered.attrs["sr_ci_row_accounting"] = {
+            "input_rows": len(data),
+            "sr_qualified_rows": 0,
+            "missing_ci_rows": 0,
+            "qualified_lower_bound_rows": 0,
+            "retained_rows": 0,
+        }
         print(f"SR/CI filter retained 0 of {len(data)} rows after SR >= {sr_threshold}.")
         return filtered
 
@@ -261,7 +270,11 @@ def apply_sr_ci_filters(
     start_utc = start_local.replace(tzinfo=local_zone).astimezone(ZoneInfo("UTC"))
     end_utc = end_local.replace(tzinfo=local_zone).astimezone(ZoneInfo("UTC"))
 
-    history = build_clearing_index_history(start_utc, end_utc, local_timezone)
+    history = (
+        clearing_index_history.copy()
+        if clearing_index_history is not None
+        else build_clearing_index_history(start_utc, end_utc, local_timezone)
+    )
     history = history[history["air_shed"] == air_shed_id].copy()
     if history.empty:
         raise RuntimeError(
@@ -299,7 +312,12 @@ def apply_sr_ci_filters(
             "(outside archive window or air shed mismatch)."
         )
 
-    qualified_ci = merged["clearing_index_is_lower_bound"].fillna(False)
+    qualified_ci = (
+        merged["clearing_index_is_lower_bound"]
+        .astype("boolean")
+        .fillna(False)
+        .astype(bool)
+    )
     result = merged[
         merged["clearing_index"].le(clearing_index_threshold) & ~qualified_ci
     ].copy()
@@ -314,4 +332,11 @@ def apply_sr_ci_filters(
         f"(SR >= {sr_threshold} W/m^2; CI <= {clearing_index_threshold}; "
         f"air shed {air_shed_id})."
     )
+    result.attrs["sr_ci_row_accounting"] = {
+        "input_rows": len(data),
+        "sr_qualified_rows": sr_qualified_rows,
+        "missing_ci_rows": missing_ci,
+        "qualified_lower_bound_rows": excluded_qualified,
+        "retained_rows": len(result),
+    }
     return result

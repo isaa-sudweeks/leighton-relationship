@@ -37,7 +37,11 @@ def expected_artifacts(summary: dict[str, Any]) -> tuple[str, ...]:
     diagnostics = summary.get("hourly_diagnostics")
     if diagnostics:
         config = summary["configuration"]
-        period_slug = f"{int(config['year'])}_{int(config['month']):02d}"
+        period_slug = (
+            f"{int(config['year'])}_{int(config['month']):02d}"
+            if config.get("month") is not None
+            else f"{int(config['year'])}_available_observations"
+        )
         return COMMON_EXPECTED_ARTIFACTS + (
             f"leighton_ratio_{period_slug}.parquet",
             str(diagnostics["path"]),

@@ -82,5 +82,4 @@ September 2, and September 4, 2026 `Leighton Relationship Update` emails.
   scientific review before finalizing the presentation.
 - [ ] After review, rerun the analysis with any agreed changes.
 - [ ] Format final paper figures to the target journal's standards, including
-  removing plot titles where required.
-
+      removing plot titles where required.
