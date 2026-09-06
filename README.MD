@@ -88,7 +88,8 @@ The archived notebook has been replaced by a reproducible Python entry point:
 python leighton_relationship_analysis.py
 ```
 
-It writes the processed May 2025 dataset, a JSON summary, the Leighton-ratio
+It writes the processed dataset for the configured year and month, a compact
+hourly diagnostics table, a JSON summary, the Leighton-ratio
 time series, non-overlapping clock-window distributions, and the temperature
 correction plot under `output/leighton_analysis/`.
 
@@ -109,6 +110,15 @@ the coefficient parameters and provenance. This replaces the complete legacy
 `7.784e-5 * UV / 2.84 * 10` expression rather than adding another scale factor.
 Each run also writes `no_threshold_sensitivity.csv` for strict cutoffs at 0,
 0.05, 0.10, 0.20, 0.50, and 1.0 ppb.
+
+`hourly_diagnostics_<year>_<month>.parquet` contains one row per retained
+hour with local and UTC timestamps, NO, NO2, O3, derived NOx (`NO + NO2` in
+ppb), UV (W/m2), solar radiation (W/m2), J(NO2) (s^-1), SZA (degrees),
+temperature (degrees F), clearing index, LR, and log10(LR). NO and NO2 are in
+ppb and O3 is in ppm, matching the source AQS table. Clearing index is null
+when the optional SR/CI archive join was not requested; a null value must not
+be interpreted as a measured index. The same units and derivation are recorded
+in `summary.json` alongside the diagnostics filename and row count.
 
 Apply the collocated AQS solar-radiation and Northern Wasatch Front
 clearing-index filters with:

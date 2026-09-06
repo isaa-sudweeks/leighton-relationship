@@ -1,9 +1,23 @@
 import unittest
 
-from scripts.package_callum_deliverable import matched_configuration
+from scripts.package_callum_deliverable import expected_artifacts, matched_configuration
 
 
 class DeliverablePackageTests(unittest.TestCase):
+    def test_expected_artifacts_use_configured_period_and_diagnostics_path(self):
+        artifacts = expected_artifacts(
+            {
+                "configuration": {"year": 2024, "month": 6},
+                "hourly_diagnostics": {
+                    "path": "hourly_diagnostics_2024_06.parquet"
+                },
+            }
+        )
+
+        self.assertIn("leighton_ratio_2024_06.parquet", artifacts)
+        self.assertIn("hourly_diagnostics_2024_06.parquet", artifacts)
+        self.assertNotIn("leighton_ratio_may_2025.parquet", artifacts)
+
     def test_accepts_only_sr_ci_switch_difference(self):
         primary = {"configuration": {"year": 2025, "apply_sr_ci": False}}
         sensitivity = {"configuration": {"year": 2025, "apply_sr_ci": True}}

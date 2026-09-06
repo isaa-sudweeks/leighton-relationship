@@ -2,6 +2,7 @@ import unittest
 import math
 from pathlib import Path
 import tempfile
+from unittest.mock import patch
 
 import pandas as pd
 
@@ -10,11 +11,13 @@ from leighton_relationship_analysis import (
     TUV_SZA_INTERCEPT_M2_W_S,
     TUV_SZA_SLOPE_M2_W_S_DEG,
     apply_no_threshold,
+    build_hourly_diagnostics,
     calculate_leighton_ratio,
     calculate_solar_zenith_angle,
     calculate_tuv_j_no2,
     evaluate_uv_alignment,
     plot_ratio_distributions,
+    run_analysis,
     split_time_windows,
     summarize_no_threshold_sensitivity,
 )
@@ -121,6 +124,139 @@ class LeightonAnalysisTests(unittest.TestCase):
             result["j_calibration_method"].iloc[0],
             "provisional_tuv_sza_linear",
         )
+
+    def test_hourly_diagnostics_has_requested_schema_and_derived_nox(self):
+        data = pd.DataFrame(
+            {
+                "datetime_utc": pd.to_datetime(["2025-06-01 19:00Z"]),
+                "NO": [1.25],
+                "NO2": [4.75],
+                "O3": [0.05],
+                "UV": [20.0],
+                "SR_W_m2": [750.0],
+                "J": [0.004],
+                "solar_zenith_angle_deg": [25.0],
+                "Temp": [70.0],
+                "clearing_index": [850],
+                "LR": [1.5],
+                "log10_LR": [math.log10(1.5)],
+            },
+            index=pd.DatetimeIndex(
+                ["2025-06-01 12:00"], name="datetime_local_standard"
+            ),
+        )
+
+        result = build_hourly_diagnostics(data)
+
+        self.assertEqual(
+            result.columns.tolist(),
+            [
+                "datetime_local_standard",
+                "datetime_utc",
+                "NO",
+                "NO2",
+                "O3",
+                "NOx",
+                "UV",
+                "SR_W_m2",
+                "J",
+                "solar_zenith_angle_deg",
+                "Temp",
+                "clearing_index",
+                "LR",
+                "log10_LR",
+            ],
+        )
+        self.assertEqual(result.loc[0, "NOx"], 6.0)
+        self.assertEqual(result.loc[0, "clearing_index"], 850)
+
+    def test_hourly_diagnostics_marks_unavailable_clearing_index_as_missing(self):
+        data = pd.DataFrame(
+            {
+                "datetime_utc": pd.to_datetime(["2025-06-01 19:00Z"]),
+                "NO": [1.0],
+                "NO2": [2.0],
+                "O3": [0.05],
+                "UV": [20.0],
+                "SR_W_m2": [750.0],
+                "J": [0.004],
+                "solar_zenith_angle_deg": [25.0],
+                "Temp": [70.0],
+                "LR": [1.5],
+                "log10_LR": [math.log10(1.5)],
+            },
+            index=pd.DatetimeIndex(
+                ["2025-06-01 12:00"], name="datetime_local_standard"
+            ),
+        )
+
+        result = build_hourly_diagnostics(data)
+
+        self.assertTrue(result["clearing_index"].isna().all())
+
+    def test_run_analysis_writes_period_named_processed_and_diagnostics_files(self):
+        index = pd.DatetimeIndex(
+            ["2024-06-01 12:00"], name="datetime_local_standard"
+        )
+        calculated = pd.DataFrame(
+            {
+                "datetime_utc": pd.to_datetime(["2024-06-01 19:00Z"]),
+                "NO": [1.0],
+                "NO2": [2.0],
+                "O3": [0.05],
+                "UV": [20.0],
+                "SR_W_m2": [750.0],
+                "J": [0.004],
+                "solar_zenith_angle_deg": [25.0],
+                "Temp": [70.0],
+                "LR": [1.5],
+                "log10_LR": [math.log10(1.5)],
+            },
+            index=index,
+        )
+        accounting = {
+            "uv_alignment_candidates": [
+                {"shift_hours": 0, "paired_rows": 24, "uv_sr_pearson_r": 1.0}
+            ],
+            "uv_selected_shift_hours": 0,
+        }
+
+        with tempfile.TemporaryDirectory() as temporary, patch(
+            "leighton_relationship_analysis.load_selected_measurements",
+            return_value=(calculated, accounting),
+        ), patch(
+            "leighton_relationship_analysis.calculate_leighton_ratio",
+            return_value=calculated,
+        ), patch(
+            "leighton_relationship_analysis.plot_ratio_timeseries"
+        ), patch(
+            "leighton_relationship_analysis.plot_ratio_distributions"
+        ), patch(
+            "leighton_relationship_analysis.plot_temperature_correction"
+        ), patch(
+            "leighton_relationship_analysis.plot_uv_alignment_diagnostic"
+        ):
+            output = Path(temporary)
+            summary = run_analysis(
+                Path("unused-aqs.parquet"),
+                Path("unused-uv.csv"),
+                output,
+                AnalysisConfig(year=2024, month=6),
+            )
+
+            processed = output / "leighton_ratio_2024_06.parquet"
+            diagnostics_path = output / "hourly_diagnostics_2024_06.parquet"
+            self.assertTrue(processed.is_file())
+            self.assertTrue(diagnostics_path.is_file())
+            self.assertFalse((output / "leighton_ratio_may_2025.parquet").exists())
+            diagnostics = pd.read_parquet(diagnostics_path)
+            self.assertEqual(len(diagnostics), 1)
+            self.assertEqual(diagnostics.loc[0, "NOx"], 3.0)
+            self.assertTrue(pd.isna(diagnostics.loc[0, "clearing_index"]))
+            self.assertEqual(
+                summary["hourly_diagnostics"]["path"],
+                diagnostics_path.name,
+            )
 
     def test_time_windows_are_non_overlapping_and_exhaustive(self):
         data = pd.DataFrame(

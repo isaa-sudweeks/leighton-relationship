@@ -17,9 +17,8 @@ from pathlib import Path
 from typing import Any
 
 
-EXPECTED_ARTIFACTS = (
+COMMON_EXPECTED_ARTIFACTS = (
     "summary.json",
-    "leighton_ratio_may_2025.parquet",
     "no_threshold_sensitivity.csv",
     "leighton_ratio_timeseries.png",
     "leighton_ratio_distributions.png",
@@ -31,6 +30,19 @@ SOURCE_AUDIT_ARTIFACTS = (
     "analysis_manifest.json",
     "analysis_row_accounting.parquet",
 )
+
+
+def expected_artifacts(summary: dict[str, Any]) -> tuple[str, ...]:
+    """Resolve period-specific analysis artifacts, with legacy compatibility."""
+    diagnostics = summary.get("hourly_diagnostics")
+    if diagnostics:
+        config = summary["configuration"]
+        period_slug = f"{int(config['year'])}_{int(config['month']):02d}"
+        return COMMON_EXPECTED_ARTIFACTS + (
+            f"leighton_ratio_{period_slug}.parquet",
+            str(diagnostics["path"]),
+        )
+    return COMMON_EXPECTED_ARTIFACTS + ("leighton_ratio_may_2025.parquet",)
 
 
 def sha256(path: Path) -> str:
@@ -85,8 +97,11 @@ def build_manifest(
 
     artifacts: list[dict[str, Any]] = []
     missing: list[str] = []
-    for label, directory in (("primary", primary_dir), ("sr_ci", sensitivity_dir)):
-        for name in EXPECTED_ARTIFACTS:
+    for label, directory, summary in (
+        ("primary", primary_dir, primary_summary),
+        ("sr_ci", sensitivity_dir, sensitivity_summary),
+    ):
+        for name in expected_artifacts(summary):
             path = directory / name
             if not path.is_file():
                 missing.append(f"{label}/{name}")

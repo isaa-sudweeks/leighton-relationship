@@ -66,6 +66,22 @@ HAWTHORNE_LONGITUDE_DEG = -111.872222
 REQUIRED_MEASUREMENTS = ["UV", "NO", "NO2", "O3", "Temp"]
 EXPECTED_POCS = {"NO": 2, "NO2": 3, "O3": 1, "SR": 1, "Temp": 1}
 NO_SENSITIVITY_THRESHOLDS_PPB = (0.0, 0.05, 0.10, 0.20, 0.50, 1.0)
+DIAGNOSTIC_COLUMNS = [
+    "datetime_local_standard",
+    "datetime_utc",
+    "NO",
+    "NO2",
+    "O3",
+    "NOx",
+    "UV",
+    "SR_W_m2",
+    "J",
+    "solar_zenith_angle_deg",
+    "Temp",
+    "clearing_index",
+    "LR",
+    "log10_LR",
+]
 
 
 @dataclass(frozen=True)
@@ -412,6 +428,46 @@ def calculate_leighton_ratio(
         },
     )
     return result
+
+
+def build_hourly_diagnostics(data: pd.DataFrame) -> pd.DataFrame:
+    """Return Callum's compact, one-row-per-retained-hour diagnostics table.
+
+    NO and NO2 are reported by the source table in ppb, so NOx is their sum in
+    ppb. O3 retains its source unit (ppm), while SR_W_m2 is the converted solar
+    radiation measurement. Clearing index is nullable because it is only
+    available when the optional SR/CI archive join has been performed.
+    """
+    diagnostics = data.reset_index().copy()
+    if "datetime_local_standard" not in diagnostics:
+        raise ValueError(
+            "Diagnostics require a datetime_local_standard index or column"
+        )
+
+    required = {
+        "datetime_utc",
+        "NO",
+        "NO2",
+        "O3",
+        "UV",
+        "SR_W_m2",
+        "J",
+        "solar_zenith_angle_deg",
+        "Temp",
+        "LR",
+        "log10_LR",
+    }
+    missing = sorted(required.difference(diagnostics.columns))
+    if missing:
+        raise ValueError(
+            "Diagnostics table is missing required analysis columns: "
+            + ", ".join(missing)
+        )
+
+    diagnostics["NOx"] = diagnostics["NO"] + diagnostics["NO2"]
+    if "clearing_index" not in diagnostics:
+        diagnostics["clearing_index"] = pd.NA
+    return diagnostics.loc[:, DIAGNOSTIC_COLUMNS]
 
 
 def split_time_windows(
@@ -799,7 +855,9 @@ def run_analysis(
     accounting["finite_ratio_rows"] = len(data)
     daytime, outside = split_time_windows(data, config)
 
-    processed_path = output_dir / "leighton_ratio_may_2025.parquet"
+    period_slug = f"{config.year}_{config.month:02d}"
+    processed_path = output_dir / f"leighton_ratio_{period_slug}.parquet"
+    diagnostics_path = output_dir / f"hourly_diagnostics_{period_slug}.parquet"
     summary_path = output_dir / "summary.json"
     timeseries_path = output_dir / "leighton_ratio_timeseries.png"
     distributions_path = output_dir / "leighton_ratio_distributions.png"
@@ -808,8 +866,35 @@ def run_analysis(
     no_sensitivity_path = output_dir / "no_threshold_sensitivity.csv"
 
     data.reset_index().to_parquet(processed_path, index=False)
+    diagnostics = build_hourly_diagnostics(data)
+    diagnostics.to_parquet(diagnostics_path, index=False)
     sensitivity.to_csv(no_sensitivity_path, index=False)
     summary = summarize(data, daytime, outside, accounting, config)
+    summary["hourly_diagnostics"] = {
+        "path": diagnostics_path.name,
+        "rows": len(diagnostics),
+        "columns": DIAGNOSTIC_COLUMNS,
+        "units": {
+            "NO": "ppb",
+            "NO2": "ppb",
+            "O3": "ppm",
+            "NOx": "ppb",
+            "UV": "W m^-2",
+            "SR_W_m2": "W m^-2",
+            "J": "s^-1",
+            "solar_zenith_angle_deg": "degrees",
+            "Temp": "degrees F",
+            "clearing_index": "dimensionless",
+            "LR": "dimensionless",
+            "log10_LR": "dimensionless",
+        },
+        "derivations": {"NOx": "NO + NO2"},
+        "clearing_index_availability": (
+            "joined from the smoke-management archive"
+            if "clearing_index" in data
+            else "unavailable; values are null because SR/CI join was not requested"
+        ),
+    }
     summary["no_threshold_sensitivity"] = sensitivity.replace(
         {np.nan: None}
     ).to_dict(orient="records")
@@ -825,6 +910,7 @@ def run_analysis(
     )
 
     print(f"Saved {len(data)} analyzed rows to {processed_path}")
+    print(f"Saved {len(diagnostics)} hourly diagnostics rows to {diagnostics_path}")
     print(
         "Leighton ratio: "
         f"median={data['LR'].median():.3f}, "
