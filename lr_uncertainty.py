@@ -1,10 +1,4 @@
-"""Uncertainty utilities for the Leighton ratio.
-
-The functions in this module report a *quantified partial uncertainty*.  They
-do not imply a complete uncertainty budget: concentration, temperature/rate
-constant, quantum-yield, and absorption-cross-section uncertainties have not
-yet been supplied for this project.
-"""
+"""Uncertainty utilities for the Leighton ratio."""
 
 from __future__ import annotations
 
@@ -34,6 +28,20 @@ CURRENTLY_UNQUANTIFIED_TERMS = (
     "long-term sensor drift for the measurement date",
 )
 
+# Provisional total budget supplied by Callum Flowerday on 2026-08-31.  The
+# rounded 14.9% total is used for reported intervals, as explicitly requested;
+# the components are retained so the total can be audited and revised later.
+PROVISIONAL_LR_RELATIVE_UNCERTAINTIES = {
+    "UV measurement": 0.055,
+    "NO2 quantum yield": 0.04,
+    "NO2 absorption cross section": 0.10,
+    "NO measurement": 0.02,
+    "NO2 measurement": 0.02,
+    "NO + O3 kinetic term": 0.08,
+    "O3 measurement": 0.02,
+}
+PROVISIONAL_TOTAL_LR_RELATIVE_UNCERTAINTY = 0.149
+
 
 def combine_independent_relative_uncertainties(
     relative_uncertainties: Sequence[float],
@@ -59,6 +67,12 @@ def apogee_su200_may21_relative_uncertainty() -> float:
     return combine_independent_relative_uncertainties(
         APOGEE_SU200_MAY21_RELATIVE_UNCERTAINTIES.values()
     )
+
+
+def provisional_lr_relative_uncertainty() -> float:
+    """Return Callum's rounded provisional total LR relative uncertainty."""
+
+    return PROVISIONAL_TOTAL_LR_RELATIVE_UNCERTAINTY
 
 
 @dataclass(frozen=True)

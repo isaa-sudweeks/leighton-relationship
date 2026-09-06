@@ -89,8 +89,9 @@ python leighton_relationship_analysis.py
 ```
 
 It writes the processed May 2025 dataset, a JSON summary, the Leighton-ratio
-time series, non-overlapping clock-window distributions, and the temperature
-correction plot under `output/leighton_analysis/`.
+and log10(LR) time series, LR relationship plots, non-overlapping clock-window
+distributions, and the temperature-correction plot under
+`output/leighton_analysis/`.
 
 The primary calculation uses Hawthorne local standard time from 10:00 through
 16:00 (inclusive) and requires strict NO > 0.20 ppb, following the August 14 and 18,
@@ -104,36 +105,58 @@ J(NO2) = C(SZA) * UV
 ```
 
 where SZA is in degrees and J(NO2) is in s^-1. The output Parquet preserves
-SZA, the applied coefficient, J(NO2), LR, and log10(LR); `summary.json` records
-the coefficient parameters and provenance. This replaces the complete legacy
+SZA, the applied coefficient, an explicit provisional-QC/extrapolation flag,
+J(NO2), LR, and log10(LR); `summary.json` records the coefficient parameters
+and provenance. Until the original TUV calibration grid is confirmed, the
+default QC interval is the 19.74–50.47 degree SZA span covered by the reviewed
+May 2025 development observations. It can be changed with `--tuv-sza-min` and
+`--tuv-sza-max`; values outside it are retained and explicitly flagged as
+provisional extrapolations. This replaces the complete legacy
 `7.784e-5 * UV / 2.84 * 10` expression rather than adding another scale factor.
 Each run also writes `no_threshold_sensitivity.csv` for strict cutoffs at 0,
 0.05, 0.10, 0.20, 0.50, and 1.0 ppb.
+
+The NO + O3 kinetic term uses the JPL Evaluation 19-5 C19 non-Arrhenius
+recommendation over its stated 204–440 K range:
+
+```text
+k(T) = 3.32e-13 * (T / 298)^2.25 * exp(-850 / T)
+```
+
+Analyze all jointly available observations within a calendar year and write an
+annual view plus monthly hourly plots with:
+
+```bash
+python leighton_relationship_analysis.py \
+  --year 2025 \
+  --full-year \
+  --output-dir output/leighton_analysis_2025_unfiltered
+```
+
+The annual view is deliberately labeled "available observations," not "full
+year": required-variable and QC filters can leave some months empty. The JSON
+summary records the AQS/UV source limits, analyzed timestamp span, retained and
+missing months, and SR/CI archive gaps.
 
 Apply the collocated AQS solar-radiation and Northern Wasatch Front
 clearing-index filters with:
 
 ```bash
 python leighton_relationship_analysis.py \
+  --year 2025 \
+  --full-year \
   --apply-sr-ci \
-  --output-dir output/leighton_analysis_sr_ci
+  --ci-history output/leighton_audit_followup_2026-07-28/full_available_ci_history_air_shed_5.parquet \
+  --output-dir output/leighton_analysis_2025_sr_ci
 ```
 
 ## Leighton-ratio uncertainty
 
-`lr_uncertainty.py` provides reusable independent-error propagation for
-`LR = J(NO2) * NO2 / (K * O3 * NO)`. For the normal May 21 geometry, the
-supplied Apogee SU-200-SS calibration (5%), repeatability (0.5%), non-linearity
-(1%), and cosine-response (2%) terms combine in quadrature to 5.5% (more
-precisely 5.50%). The individual components remain available in
-`APOGEE_SU200_MAY21_RELATIVE_UNCERTAINTIES` for auditability.
-
-This is currently a **partial quantified uncertainty**, not a complete LR
-uncertainty estimate. No values have been assumed for NO, NO2, or O3
-measurement uncertainty; temperature or rate-constant uncertainty; NO2
-quantum yield or absorption cross section; or date-specific long-term sensor
-drift. `add_quantified_lr_uncertainty` can combine fractional source
-uncertainty columns row by row when those values become available, while
-recording how many quantified components contributed to each row. Plot error
-bars should be labelled as partial quantified uncertainty until the remaining
-terms have defensible values.
+`lr_uncertainty.py` records Callum's August 31 provisional relative budget:
+UV measurement 5.5%, NO2 quantum yield 4%, NO2 absorption cross section 10%,
+NO measurement 2%, NO2 measurement 2%, NO + O3 kinetics 8%, and O3 measurement
+2%. These terms combine to 14.908% in quadrature; the requested rounded 14.9%
+is used in plots and row-level outputs. Absolute uncertainty is calculated for
+each observation as `abs(LR) * 0.149`, so every row retains its own LR-scaled
+error bar. The component budget and unrounded RSS remain in `summary.json` for
+auditability.

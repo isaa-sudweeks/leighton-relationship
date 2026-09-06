@@ -6,14 +6,26 @@ import pandas as pd
 from lr_uncertainty import (
     APOGEE_SU200_MAY21_RELATIVE_UNCERTAINTIES,
     CURRENTLY_UNQUANTIFIED_TERMS,
+    PROVISIONAL_LR_RELATIVE_UNCERTAINTIES,
+    PROVISIONAL_TOTAL_LR_RELATIVE_UNCERTAINTY,
     add_quantified_lr_uncertainty,
     apogee_su200_may21_relative_uncertainty,
     combine_independent_relative_uncertainties,
     propagate_leighton_relative_uncertainty,
+    provisional_lr_relative_uncertainty,
 )
 
 
 class LeightonUncertaintyTests(unittest.TestCase):
+    def test_provisional_budget_matches_callum_august_31_email(self):
+        rss = combine_independent_relative_uncertainties(
+            PROVISIONAL_LR_RELATIVE_UNCERTAINTIES.values()
+        )
+
+        self.assertAlmostEqual(rss, 0.14908051515875576)
+        self.assertEqual(provisional_lr_relative_uncertainty(), 0.149)
+        self.assertEqual(PROVISIONAL_TOTAL_LR_RELATIVE_UNCERTAINTY, 0.149)
+
     def test_apogee_terms_combine_to_five_point_five_percent(self):
         expected = math.sqrt(5**2 + 0.5**2 + 1**2 + 2**2) / 100
         self.assertAlmostEqual(apogee_su200_may21_relative_uncertainty(), expected)

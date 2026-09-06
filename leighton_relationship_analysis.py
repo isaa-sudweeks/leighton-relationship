@@ -13,7 +13,7 @@ fixed pressure remains an independently unvalidated scientific assumption.
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import json
 from pathlib import Path
 from typing import Literal
@@ -27,10 +27,10 @@ import numpy as np
 import pandas as pd
 
 from lr_uncertainty import (
-    APOGEE_SU200_MAY21_RELATIVE_UNCERTAINTIES,
-    CURRENTLY_UNQUANTIFIED_TERMS,
+    PROVISIONAL_LR_RELATIVE_UNCERTAINTIES,
+    PROVISIONAL_TOTAL_LR_RELATIVE_UNCERTAINTY,
     add_quantified_lr_uncertainty,
-    apogee_su200_may21_relative_uncertainty,
+    combine_independent_relative_uncertainties,
 )
 from sr_ci_filter import apply_sr_ci_filters
 
@@ -42,9 +42,13 @@ DEFAULT_AQS_PATH = Path(
 DEFAULT_UV_PATH = Path("data/UV Data/UV Data All Time HW LP RB.csv")
 DEFAULT_OUTPUT_DIR = Path("output/leighton_analysis")
 
-# Kinetic and concentration assumptions retained from the archived notebook.
-REACTION_PREFACTOR = 3.0e-12
-ACTIVATION_OVER_R = 1500.0
+# JPL Evaluation 19-5 C19 recommended non-Arrhenius parameterization for
+# NO + O3 between 204 and 440 K (cm3 molecule-1 s-1).
+JPL_NO_O3_PREFACTOR = 3.32e-13
+JPL_NO_O3_TEMPERATURE_EXPONENT = 2.25
+JPL_NO_O3_ACTIVATION_OVER_R_K = 850.0
+JPL_NO_O3_REFERENCE_TEMPERATURE_K = 298.0
+JPL_NO_O3_SOURCE = "JPL Evaluation 19-5 (2020), reaction C19"
 PRESSURE_PA = 87_000.0
 BOLTZMANN_J_PER_K = 1.380649e-23
 F298 = 1.07
@@ -58,6 +62,10 @@ LANGLEY_PER_MINUTE_TO_W_M2 = 41_840.0 / 60.0
 TUV_SZA_INTERCEPT_M2_W_S = 1.538e-4
 TUV_SZA_SLOPE_M2_W_S_DEG = 1.951e-6
 J_CALIBRATION_SOURCE = "Callum Flowerday emails dated 2026-08-14 and 2026-08-18"
+# Provisional QC bounds from the SZA span of the reviewed May 2025 development
+# observations. These are not yet confirmed as the underlying TUV grid limits.
+DEFAULT_TUV_QC_SZA_MIN_DEG = 19.74
+DEFAULT_TUV_QC_SZA_MAX_DEG = 50.47
 
 # Hawthorne AQS site 49-035-3006 coordinates from the source AQS snapshot.
 HAWTHORNE_LATITUDE_DEG = 40.736389
@@ -71,7 +79,7 @@ NO_SENSITIVITY_THRESHOLDS_PPB = (0.0, 0.05, 0.10, 0.20, 0.50, 1.0)
 @dataclass(frozen=True)
 class AnalysisConfig:
     year: int = 2025
-    month: int = 5
+    month: int | None = 5
     minimum_uv: float = 10.0
     daytime_start: str = "10:00"
     daytime_end: str = "16:00"
@@ -85,6 +93,23 @@ class AnalysisConfig:
     target_airshed: str = "Northern Wasatch Front"
     uv_hour_shift: int | None = None
     uv_alignment_max_shift: int = 3
+    tuv_qc_sza_min_deg: float = DEFAULT_TUV_QC_SZA_MIN_DEG
+    tuv_qc_sza_max_deg: float = DEFAULT_TUV_QC_SZA_MAX_DEG
+    ci_history_path: Path | None = None
+
+    def __post_init__(self) -> None:
+        if self.tuv_qc_sza_min_deg > self.tuv_qc_sza_max_deg:
+            raise ValueError("TUV SZA QC minimum must not exceed maximum")
+
+
+def period_label(config: AnalysisConfig) -> str:
+    """Return a stable label for a monthly or full-year run."""
+
+    return (
+        f"{config.year}-{config.month:02d}"
+        if config.month is not None
+        else f"{config.year} available observations"
+    )
 
 
 def calculate_solar_zenith_angle(
@@ -167,10 +192,10 @@ def evaluate_uv_alignment(
     row stamped 12:00. The automatic choice maximizes the Pearson correlation
     between UV and collocated solar radiation for the requested month.
     """
-    period = aqs.loc[
-        (aqs["datetime_local_standard"].dt.year == config.year)
-        & (aqs["datetime_local_standard"].dt.month == config.month)
-    ]
+    period_mask = aqs["datetime_local_standard"].dt.year == config.year
+    if config.month is not None:
+        period_mask &= aqs["datetime_local_standard"].dt.month == config.month
+    period = aqs.loc[period_mask]
     diagnostics: list[dict[str, float | int]] = []
     shifts = (
         [config.uv_hour_shift]
@@ -234,6 +259,7 @@ def load_selected_measurements(
     aqs["datetime_local_standard"] = pd.to_datetime(
         aqs["datetime_local_standard"]
     )
+    aqs_period = aqs.loc[aqs["datetime_local_standard"].dt.year == config.year]
     uv = pd.read_csv(uv_path)
     uv = uv.rename(columns={uv.columns[0]: "uv_datetime", "HW": "UV"})
     uv["uv_datetime"] = pd.to_datetime(
@@ -241,7 +267,22 @@ def load_selected_measurements(
     )
     uv = uv[["uv_datetime", "UV"]].dropna(subset=["uv_datetime"])
 
-    accounting = {"aqs_rows": len(aqs)}
+    accounting = {
+        "aqs_rows": len(aqs),
+        "aqs_year_rows": len(aqs_period),
+        "aqs_year_min_timestamp": (
+            str(aqs_period["datetime_local_standard"].min())
+            if not aqs_period.empty
+            else None
+        ),
+        "aqs_year_max_timestamp": (
+            str(aqs_period["datetime_local_standard"].max())
+            if not aqs_period.empty
+            else None
+        ),
+        "uv_source_min_timestamp": str(uv["uv_datetime"].min()),
+        "uv_source_max_timestamp": str(uv["uv_datetime"].max()),
+    }
     selected_shift, alignment_diagnostics = evaluate_uv_alignment(aqs, uv, config)
     accounting["uv_alignment_method"] = (
         "explicit_shift"
@@ -262,11 +303,17 @@ def load_selected_measurements(
     data = data.set_index("datetime_local_standard").sort_index()
     accounting["exact_uv_matches"] = len(data)
 
-    in_period = (data.index.year == config.year) & (
-        data.index.month == config.month
-    )
+    in_period = data.index.year == config.year
+    if config.month is not None:
+        in_period &= data.index.month == config.month
     data = data.loc[in_period].copy()
     accounting["period_rows"] = len(data)
+    accounting["matched_period_min_timestamp"] = (
+        str(data.index.min()) if not data.empty else None
+    )
+    accounting["matched_period_max_timestamp"] = (
+        str(data.index.max()) if not data.empty else None
+    )
 
     data["UV"] = data["UV"].where(data["UV"] > config.minimum_uv)
     accounting["uv_threshold_rows"] = int(data["UV"].notna().sum())
@@ -303,6 +350,16 @@ def load_selected_measurements(
         accounting["sr_threshold_rows"] = int(
             data["SR_W_m2"].ge(config.sr_threshold_w_m2).sum()
         )
+        ci_history = (
+            pd.read_parquet(config.ci_history_path)
+            if config.ci_history_path is not None
+            else None
+        )
+        if ci_history is not None:
+            accounting["ci_history_path"] = str(config.ci_history_path)
+            accounting["ci_history_rows"] = len(ci_history)
+            accounting["ci_history_min_date"] = str(ci_history["valid_date"].min())
+            accounting["ci_history_max_date"] = str(ci_history["valid_date"].max())
         data = apply_sr_ci_filters(
             data,
             enabled=True,
@@ -310,6 +367,10 @@ def load_selected_measurements(
             sr_threshold=config.sr_threshold_w_m2,
             clearing_index_threshold=config.clearing_index_threshold,
             target_airshed=config.target_airshed,
+            clearing_index_history=ci_history,
+        )
+        accounting["sr_ci_row_accounting"] = data.attrs.get(
+            "sr_ci_row_accounting", {}
         )
         accounting["sr_ci_filtered_rows"] = len(data)
         if data.empty:
@@ -361,9 +422,13 @@ def calculate_leighton_ratio(
     config = config or AnalysisConfig()
     result = data.copy()
     result["Temp_K"] = (result["Temp"] - 32.0) * (5.0 / 9.0) + 273.15
-    result["K"] = REACTION_PREFACTOR * np.exp(
-        -ACTIVATION_OVER_R / result["Temp_K"]
+    result["K"] = (
+        JPL_NO_O3_PREFACTOR
+        * (result["Temp_K"] / JPL_NO_O3_REFERENCE_TEMPERATURE_K)
+        ** JPL_NO_O3_TEMPERATURE_EXPONENT
+        * np.exp(-JPL_NO_O3_ACTIVATION_OVER_R_K / result["Temp_K"])
     )
+    result["k_no_o3_method"] = "JPL_19-5_C19_non_arrhenius"
     result["f_T"] = F298 * np.exp(
         G_TEMPERATURE * (1.0 / result["Temp_K"] - 1.0 / 298.0)
     )
@@ -379,6 +444,24 @@ def calculate_leighton_ratio(
         result["solar_zenith_angle_deg"],
     )
     result["j_calibration_method"] = "provisional_tuv_sza_linear"
+    result["tuv_sza_within_provisional_qc_range"] = result[
+        "solar_zenith_angle_deg"
+    ].between(
+        config.tuv_qc_sza_min_deg,
+        config.tuv_qc_sza_max_deg,
+        inclusive="both",
+    )
+    result["tuv_sza_outside_provisional_qc_range"] = ~result[
+        "tuv_sza_within_provisional_qc_range"
+    ]
+    # Requested extrapolation flag; the range basis remains explicitly
+    # provisional pending confirmation against the underlying TUV grid.
+    result["tuv_sza_extrapolated"] = result[
+        "tuv_sza_outside_provisional_qc_range"
+    ]
+    result["tuv_sza_range_basis"] = (
+        "provisional_reviewed_May_2025_observation_span_pending_TUV_grid_confirmation"
+    )
 
     number_density = (
         PRESSURE_PA / (BOLTZMANN_J_PER_K * result["Temp_K"])
@@ -400,14 +483,14 @@ def calculate_leighton_ratio(
     if result.empty:
         raise ValueError("No finite Leighton-ratio values were calculated")
     result["log10_LR"] = np.log10(result["LR"])
-    result["apogee_su200_may21_relative_uncertainty"] = (
-        apogee_su200_may21_relative_uncertainty()
+    result["provisional_total_lr_relative_uncertainty"] = (
+        PROVISIONAL_TOTAL_LR_RELATIVE_UNCERTAINTY
     )
     result = add_quantified_lr_uncertainty(
         result,
         {
-            "Apogee SU-200-SS supplied May 21 components": (
-                "apogee_su200_may21_relative_uncertainty"
+            "Callum 2026-08-31 provisional total LR uncertainty": (
+                "provisional_total_lr_relative_uncertainty"
             )
         },
     )
@@ -457,7 +540,7 @@ def plot_ratio_timeseries(
         elinewidth=0.8,
         capsize=2,
         alpha=0.82,
-        label="Hourly observation with partial quantified uncertainty",
+        label="Hourly observation with provisional 14.9% LR uncertainty",
     )
     axis.axhline(
         1.0,
@@ -467,7 +550,7 @@ def plot_ratio_timeseries(
         label="Unity reference",
     )
     axis.set_title(
-        f"Leighton Ratio at Hawthorne — {config.year}-{config.month:02d}",
+        f"Leighton Ratio at Hawthorne — {period_label(config)}",
         loc="left",
         fontsize=16,
         fontweight="bold",
@@ -507,12 +590,117 @@ def plot_ratio_timeseries(
     fig.text(
         0.985,
         0.025,
-        "Error bars show only the quantified Apogee contribution (5.5%); full LR uncertainty is unavailable.",
+        "Error bars use the provisional 14.9% total relative LR uncertainty budget.",
         ha="right",
         va="bottom",
         fontsize=8,
         color="#6B7280",
     )
+    fig.savefig(destination, dpi=180, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+
+
+def plot_log_ratio_timeseries(
+    data: pd.DataFrame,
+    config: AnalysisConfig,
+    destination: Path,
+) -> None:
+    """Plot hourly log10(LR), including transformed uncertainty bounds."""
+
+    lower_lr = (
+        data["LR"] - data["LR_quantified_absolute_uncertainty"]
+    ).clip(lower=np.finfo(float).tiny)
+    upper_lr = data["LR"] + data["LR_quantified_absolute_uncertainty"]
+    lower_error = data["log10_LR"] - np.log10(lower_lr)
+    upper_error = np.log10(upper_lr) - data["log10_LR"]
+    fig, axis = plt.subplots(figsize=(11, 6.2))
+    fig.subplots_adjust(left=0.09, right=0.985, top=0.84, bottom=0.18)
+    axis.errorbar(
+        data.index,
+        data["log10_LR"],
+        yerr=np.vstack([lower_error, upper_error]),
+        fmt="o",
+        color="#2563EB",
+        ecolor="#93C5FD",
+        markeredgecolor="#1E3A8A",
+        markeredgewidth=0.4,
+        markersize=5.0,
+        elinewidth=0.7,
+        capsize=1.5,
+        alpha=0.72,
+        label="Hourly observation with transformed 14.9% interval",
+    )
+    axis.axhline(0.0, color="#374151", linewidth=1.4, linestyle="--", label="LR = 1")
+    axis.set_title(
+        f"Hourly log10(Leighton Ratio) at Hawthorne — {period_label(config)}",
+        loc="left",
+        fontsize=16,
+        fontweight="bold",
+        color="#111827",
+        pad=18,
+    )
+    axis.text(
+        0,
+        1.01,
+        f"n={len(data)} hourly values · {config.daytime_start}–{config.daytime_end} LST",
+        transform=axis.transAxes,
+        fontsize=10,
+        color="#4B5563",
+        va="bottom",
+    )
+    axis.set_ylabel("log10(Leighton ratio)")
+    axis.set_xlabel("Local Standard Time")
+    locator = mdates.AutoDateLocator(minticks=5, maxticks=10)
+    axis.xaxis.set_major_locator(locator)
+    axis.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+    axis.legend(frameon=False, loc="upper left")
+    _style_axis(axis)
+    fig.savefig(destination, dpi=180, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+
+
+def plot_lr_relationship(
+    data: pd.DataFrame,
+    x_column: str,
+    x_label: str,
+    destination: Path,
+    config: AnalysisConfig,
+) -> None:
+    """Plot row-level LR against one explanatory observation."""
+
+    fig, axis = plt.subplots(figsize=(8.6, 6.2))
+    fig.subplots_adjust(left=0.12, right=0.98, top=0.84, bottom=0.14)
+    axis.scatter(
+        data[x_column],
+        data["LR"],
+        s=25,
+        color="#D97706",
+        edgecolors="#92400E",
+        linewidths=0.35,
+        alpha=0.62,
+    )
+    axis.axhline(1.0, color="#374151", linewidth=1.3, linestyle="--")
+    axis.set_title(
+        f"Leighton Ratio vs {x_label} — {period_label(config)}",
+        loc="left",
+        fontsize=15,
+        fontweight="bold",
+        color="#111827",
+        pad=18,
+    )
+    axis.text(
+        0,
+        1.01,
+        f"n={len(data)} hourly observations · Hawthorne · {config.daytime_start}–{config.daytime_end} LST",
+        transform=axis.transAxes,
+        fontsize=9.5,
+        color="#4B5563",
+        va="bottom",
+    )
+    axis.set_xlabel(x_label)
+    axis.set_ylabel("Leighton ratio (dimensionless)")
+    axis.set_ylim(bottom=0)
+    _style_axis(axis)
     fig.savefig(destination, dpi=180, bbox_inches="tight", facecolor="white")
     plt.close(fig)
 
@@ -668,7 +856,7 @@ def plot_uv_alignment_diagnostic(
         0.12,
         0.86,
         (
-            f"{config.year}-{config.month:02d} hourly pairs · Pearson r · "
+            f"{period_label(config)} hourly pairs · Pearson r · "
             f"selected shift={selected_shift:+d} h · "
             f"candidate n={min(counts)}–{max(counts)}"
         ),
@@ -712,10 +900,20 @@ def summarize(
             "maximum": float(frame["LR"].max()),
         }
 
+    observed_months = sorted(int(month) for month in data.index.month.unique())
+    expected_months = list(range(1, 13)) if config.month is None else [config.month]
+    missing_observation_months = [
+        month for month in expected_months if month not in observed_months
+    ]
+    coverage_complete = not missing_observation_months
+
     return {
         "configuration": {
             "year": config.year,
             "month": config.month,
+            "period": (
+                "month" if config.month is not None else "year_available_observations"
+            ),
             "minimum_uv": config.minimum_uv,
             "daytime_start": config.daytime_start,
             "daytime_end": config.daytime_end,
@@ -732,8 +930,39 @@ def summarize(
             "target_airshed": config.target_airshed,
             "uv_hour_shift": config.uv_hour_shift,
             "uv_alignment_max_shift": config.uv_alignment_max_shift,
+            "tuv_qc_sza_min_deg": config.tuv_qc_sza_min_deg,
+            "tuv_qc_sza_max_deg": config.tuv_qc_sza_max_deg,
+            "ci_history_path": (
+                str(config.ci_history_path)
+                if config.ci_history_path is not None
+                else None
+            ),
         },
         "row_accounting": accounting,
+        "coverage": {
+            "analysis_min_timestamp": str(data.index.min()),
+            "analysis_max_timestamp": str(data.index.max()),
+            "months_with_retained_observations": observed_months,
+            "months_without_retained_observations": missing_observation_months,
+            "all_calendar_months_have_retained_observations": coverage_complete,
+            "label": (
+                "complete retained-month coverage"
+                if coverage_complete
+                else "available observations only; not complete retained-month coverage"
+            ),
+            "source_limitations": [
+                "State UV source ends at "
+                f"{accounting.get('uv_source_max_timestamp')}",
+                "Rows are retained only when UV, NO, NO2, O3, and temperature are available and pass declared filters.",
+            ]
+            + (
+                [
+                    "SR/CI coverage is additionally limited by the clearing-index archive; see sr_ci_row_accounting."
+                ]
+                if config.apply_sr_ci
+                else []
+            ),
+        },
         "all_observations": statistics(data),
         "daytime_window": statistics(daytime),
         "outside_window": statistics(outside),
@@ -745,7 +974,20 @@ def summarize(
             "j_units": "s^-1",
             "tuv_sza_intercept_m2_w_s": TUV_SZA_INTERCEPT_M2_W_S,
             "tuv_sza_slope_m2_w_s_deg": TUV_SZA_SLOPE_M2_W_S_DEG,
+            "tuv_provisional_qc_sza_range_deg": [
+                config.tuv_qc_sza_min_deg,
+                config.tuv_qc_sza_max_deg,
+            ],
+            "tuv_sza_range_status": "provisional_pending_TUV_grid_confirmation",
+            "tuv_sza_range_basis": "reviewed May 2025 observation span",
+            "sza_extrapolated_rows": int(data["tuv_sza_extrapolated"].sum()),
             "sza_method": "NOAA fractional-year solar-position approximation",
+            "no_o3_rate_constant_method": "JPL_19-5_C19_non_arrhenius",
+            "no_o3_rate_constant_source": JPL_NO_O3_SOURCE,
+            "no_o3_prefactor_cm3_molecule_s": JPL_NO_O3_PREFACTOR,
+            "no_o3_temperature_exponent": JPL_NO_O3_TEMPERATURE_EXPONENT,
+            "no_o3_activation_over_r_k": JPL_NO_O3_ACTIVATION_OVER_R_K,
+            "no_o3_reference_temperature_k": JPL_NO_O3_REFERENCE_TEMPERATURE_K,
             "state_uv_area_or_scale_correction": "none",
             "fixed_pressure_pa": PRESSURE_PA,
             "timestamp_join": (
@@ -754,18 +996,20 @@ def summarize(
             ),
         },
         "uncertainty": {
-            "status": "partial_quantified_uncertainty",
-            "sensor_model": "Apogee SU-200-SS",
-            "geometry": "normal May 21 geometry supplied by Callum",
+            "status": "provisional_total_relative_uncertainty",
+            "source": "Callum Flowerday email dated 2026-08-31",
             "quantified_relative_components": (
-                APOGEE_SU200_MAY21_RELATIVE_UNCERTAINTIES
+                PROVISIONAL_LR_RELATIVE_UNCERTAINTIES
+            ),
+            "components_rss_unrounded": combine_independent_relative_uncertainties(
+                PROVISIONAL_LR_RELATIVE_UNCERTAINTIES.values()
             ),
             "combined_quantified_relative_uncertainty": (
-                apogee_su200_may21_relative_uncertainty()
+                PROVISIONAL_TOTAL_LR_RELATIVE_UNCERTAINTY
             ),
             "combination_method": "root_sum_of_squares_assuming_independence",
-            "unquantified_terms": CURRENTLY_UNQUANTIFIED_TERMS,
-            "plot_interval_label": "partial quantified uncertainty",
+            "plot_interval_label": "provisional 14.9% total LR uncertainty",
+            "row_level_method": "absolute uncertainty = abs(LR) * 0.149",
         },
     }
 
@@ -799,9 +1043,16 @@ def run_analysis(
     accounting["finite_ratio_rows"] = len(data)
     daytime, outside = split_time_windows(data, config)
 
-    processed_path = output_dir / "leighton_ratio_may_2025.parquet"
+    processed_name = (
+        f"leighton_ratio_{pd.Timestamp(config.year, config.month, 1):%B_%Y}".lower()
+        + ".parquet"
+        if config.month is not None
+        else f"leighton_ratio_{config.year}_available_observations.parquet"
+    )
+    processed_path = output_dir / processed_name
     summary_path = output_dir / "summary.json"
     timeseries_path = output_dir / "leighton_ratio_timeseries.png"
+    log_timeseries_path = output_dir / "log10_leighton_ratio_timeseries.png"
     distributions_path = output_dir / "leighton_ratio_distributions.png"
     correction_path = output_dir / "temperature_correction.png"
     alignment_path = output_dir / "uv_alignment_diagnostic.png"
@@ -815,6 +1066,7 @@ def run_analysis(
     ).to_dict(orient="records")
     summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     plot_ratio_timeseries(data, config, timeseries_path)
+    plot_log_ratio_timeseries(data, config, log_timeseries_path)
     plot_ratio_distributions(daytime, outside, config, distributions_path)
     plot_temperature_correction(data, correction_path)
     plot_uv_alignment_diagnostic(
@@ -823,6 +1075,55 @@ def run_analysis(
         config,
         alignment_path,
     )
+    relationships = {
+        "NO": ("NO (ppb)", "lr_vs_no.png"),
+        "solar_zenith_angle_deg": ("Solar zenith angle (degrees)", "lr_vs_sza.png"),
+        "NO2": ("NO2 (ppb)", "lr_vs_no2.png"),
+        "O3": ("O3 (ppm)", "lr_vs_o3.png"),
+    }
+    for column, (label, filename) in relationships.items():
+        plot_lr_relationship(data, column, label, output_dir / filename, config)
+
+    if config.month is None:
+        monthly_dir = output_dir / "monthly"
+        monthly_dir.mkdir(exist_ok=True)
+        for stale_plot in monthly_dir.glob(f"{config.year}-??_*_timeseries.png"):
+            stale_plot.unlink()
+        monthly_rows: list[dict[str, object]] = []
+        for month in range(1, 13):
+            monthly = data.loc[data.index.month == month]
+            monthly_rows.append(
+                {
+                    "year": config.year,
+                    "month": month,
+                    "count": len(monthly),
+                    "median_lr": (
+                        float(monthly["LR"].median()) if not monthly.empty else None
+                    ),
+                    "sza_extrapolated_rows": (
+                        int(monthly["tuv_sza_extrapolated"].sum())
+                        if not monthly.empty
+                        else 0
+                    ),
+                }
+            )
+            if monthly.empty:
+                continue
+            monthly_config = replace(config, month=month)
+            stem = f"{config.year}-{month:02d}"
+            plot_ratio_timeseries(
+                monthly,
+                monthly_config,
+                monthly_dir / f"{stem}_leighton_ratio_timeseries.png",
+            )
+            plot_log_ratio_timeseries(
+                monthly,
+                monthly_config,
+                monthly_dir / f"{stem}_log10_leighton_ratio_timeseries.png",
+            )
+        pd.DataFrame(monthly_rows).to_csv(
+            output_dir / "monthly_summary.csv", index=False
+        )
 
     print(f"Saved {len(data)} analyzed rows to {processed_path}")
     print(
@@ -849,6 +1150,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--year", type=int, default=2025)
     parser.add_argument("--month", type=int, default=5)
+    parser.add_argument(
+        "--full-year",
+        action="store_true",
+        help="analyze all available observations in --year and write monthly plots",
+    )
     parser.add_argument("--minimum-uv", type=float, default=10.0)
     parser.add_argument("--minimum-no", type=float, default=0.20)
     parser.add_argument(
@@ -877,6 +1183,30 @@ def parse_args() -> argparse.Namespace:
             "join; omit to select the best shift from -3 through +3 using UV–SR"
         ),
     )
+    parser.add_argument(
+        "--tuv-sza-min",
+        type=float,
+        default=DEFAULT_TUV_QC_SZA_MIN_DEG,
+        help=(
+            "lower provisional QC SZA bound based on the reviewed May 2025 "
+            "observation span (degrees)"
+        ),
+    )
+    parser.add_argument(
+        "--tuv-sza-max",
+        type=float,
+        default=DEFAULT_TUV_QC_SZA_MAX_DEG,
+        help=(
+            "upper provisional QC SZA bound based on the reviewed May 2025 "
+            "observation span (degrees)"
+        ),
+    )
+    parser.add_argument(
+        "--ci-history",
+        type=Path,
+        default=None,
+        help="optional cached clearing-index history Parquet (avoids live retrieval)",
+    )
     return parser.parse_args()
 
 
@@ -884,7 +1214,7 @@ def main() -> None:
     args = parse_args()
     config = AnalysisConfig(
         year=args.year,
-        month=args.month,
+        month=None if args.full_year else args.month,
         minimum_uv=args.minimum_uv,
         minimum_no_ppb=args.minimum_no,
         minimum_no_operator=args.minimum_no_operator,
@@ -893,6 +1223,9 @@ def main() -> None:
         clearing_index_threshold=args.ci_threshold,
         target_airshed=args.airshed,
         uv_hour_shift=args.uv_hour_shift,
+        tuv_qc_sza_min_deg=args.tuv_sza_min,
+        tuv_qc_sza_max_deg=args.tuv_sza_max,
+        ci_history_path=args.ci_history,
     )
     run_analysis(args.aqs, args.uv, args.output_dir, config)
 
