@@ -88,10 +88,10 @@ The archived notebook has been replaced by a reproducible Python entry point:
 python leighton_relationship_analysis.py
 ```
 
-It writes the processed May 2025 dataset, a JSON summary, the Leighton-ratio
-and log10(LR) time series, LR relationship plots, non-overlapping clock-window
-distributions, and the temperature-correction plot under
-`output/leighton_analysis/`.
+It writes the processed dataset for the configured period, a compact hourly
+diagnostics table, a JSON summary, LR and log10(LR) time series, relationship
+plots, non-overlapping clock-window distributions, and the temperature
+correction plot under `output/leighton_analysis/`.
 
 The primary calculation uses Hawthorne local standard time from 10:00 through
 16:00 (inclusive) and requires strict NO > 0.20 ppb, following the August 14 and 18,
@@ -137,6 +137,19 @@ The annual view is deliberately labeled "available observations," not "full
 year": required-variable and QC filters can leave some months empty. The JSON
 summary records the AQS/UV source limits, analyzed timestamp span, retained and
 missing months, and SR/CI archive gaps.
+
+`hourly_diagnostics_<year>_<month>.parquet` contains one row per retained
+hour with local and UTC timestamps, NO, NO2, O3, derived NOx (`NO + NO2` in
+ppb), UV (W/m2), solar radiation (W/m2), J(NO2) (s^-1), SZA (degrees),
+temperature (degrees F), clearing index, LR, and log10(LR). NO and NO2 are in
+ppb and O3 is in ppm, matching the source AQS table. Clearing index is null
+when the optional SR/CI archive join was not requested; a null value must not
+be interpreted as a measured index. The same units and derivation are recorded
+in `summary.json` alongside the diagnostics filename and row count.
+
+Each successful run removes period-specific artifacts left by an earlier run
+in the same output directory before writing the new result. Unrelated files
+are preserved.
 
 Apply the collocated AQS solar-radiation and Northern Wasatch Front
 clearing-index filters with:

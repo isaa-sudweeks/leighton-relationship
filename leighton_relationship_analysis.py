@@ -74,6 +74,22 @@ HAWTHORNE_LONGITUDE_DEG = -111.872222
 REQUIRED_MEASUREMENTS = ["UV", "NO", "NO2", "O3", "Temp"]
 EXPECTED_POCS = {"NO": 2, "NO2": 3, "O3": 1, "SR": 1, "Temp": 1}
 NO_SENSITIVITY_THRESHOLDS_PPB = (0.0, 0.05, 0.10, 0.20, 0.50, 1.0)
+DIAGNOSTIC_COLUMNS = [
+    "datetime_local_standard",
+    "datetime_utc",
+    "NO",
+    "NO2",
+    "O3",
+    "NOx",
+    "UV",
+    "SR_W_m2",
+    "J",
+    "solar_zenith_angle_deg",
+    "Temp",
+    "clearing_index",
+    "LR",
+    "log10_LR",
+]
 
 
 @dataclass(frozen=True)
@@ -495,6 +511,71 @@ def calculate_leighton_ratio(
         },
     )
     return result
+
+
+def build_hourly_diagnostics(data: pd.DataFrame) -> pd.DataFrame:
+    """Return Callum's compact, one-row-per-retained-hour diagnostics table.
+
+    NO and NO2 are reported by the source table in ppb, so NOx is their sum in
+    ppb. O3 retains its source unit (ppm), while SR_W_m2 is the converted solar
+    radiation measurement. Clearing index is nullable because it is only
+    available when the optional SR/CI archive join has been performed.
+    """
+    diagnostics = data.reset_index().copy()
+    if "datetime_local_standard" not in diagnostics:
+        raise ValueError(
+            "Diagnostics require a datetime_local_standard index or column"
+        )
+
+    required = {
+        "datetime_utc",
+        "NO",
+        "NO2",
+        "O3",
+        "UV",
+        "SR_W_m2",
+        "J",
+        "solar_zenith_angle_deg",
+        "Temp",
+        "LR",
+        "log10_LR",
+    }
+    missing = sorted(required.difference(diagnostics.columns))
+    if missing:
+        raise ValueError(
+            "Diagnostics table is missing required analysis columns: "
+            + ", ".join(missing)
+        )
+
+    diagnostics["NOx"] = diagnostics["NO"] + diagnostics["NO2"]
+    if "clearing_index" not in diagnostics:
+        diagnostics["clearing_index"] = pd.NA
+    return diagnostics.loc[:, DIAGNOSTIC_COLUMNS]
+
+
+def clear_stale_analysis_artifacts(output_dir: Path) -> None:
+    """Remove only artifacts owned by this pipeline from a reused directory."""
+
+    for pattern in (
+        "leighton_ratio_*.parquet",
+        "hourly_diagnostics_*.parquet",
+    ):
+        for path in output_dir.glob(pattern):
+            path.unlink()
+
+    monthly_summary = output_dir / "monthly_summary.csv"
+    if monthly_summary.exists():
+        monthly_summary.unlink()
+
+    monthly_dir = output_dir / "monthly"
+    if monthly_dir.is_dir():
+        for path in monthly_dir.glob("*_timeseries.png"):
+            path.unlink()
+        try:
+            monthly_dir.rmdir()
+        except OSError:
+            # Preserve a nonempty directory containing files not owned here.
+            pass
 
 
 def split_time_windows(
@@ -1043,13 +1124,14 @@ def run_analysis(
     accounting["finite_ratio_rows"] = len(data)
     daytime, outside = split_time_windows(data, config)
 
-    processed_name = (
-        f"leighton_ratio_{pd.Timestamp(config.year, config.month, 1):%B_%Y}".lower()
-        + ".parquet"
+    clear_stale_analysis_artifacts(output_dir)
+    period_slug = (
+        f"{config.year}_{config.month:02d}"
         if config.month is not None
-        else f"leighton_ratio_{config.year}_available_observations.parquet"
+        else f"{config.year}_available_observations"
     )
-    processed_path = output_dir / processed_name
+    processed_path = output_dir / f"leighton_ratio_{period_slug}.parquet"
+    diagnostics_path = output_dir / f"hourly_diagnostics_{period_slug}.parquet"
     summary_path = output_dir / "summary.json"
     timeseries_path = output_dir / "leighton_ratio_timeseries.png"
     log_timeseries_path = output_dir / "log10_leighton_ratio_timeseries.png"
@@ -1059,8 +1141,35 @@ def run_analysis(
     no_sensitivity_path = output_dir / "no_threshold_sensitivity.csv"
 
     data.reset_index().to_parquet(processed_path, index=False)
+    diagnostics = build_hourly_diagnostics(data)
+    diagnostics.to_parquet(diagnostics_path, index=False)
     sensitivity.to_csv(no_sensitivity_path, index=False)
     summary = summarize(data, daytime, outside, accounting, config)
+    summary["hourly_diagnostics"] = {
+        "path": diagnostics_path.name,
+        "rows": len(diagnostics),
+        "columns": DIAGNOSTIC_COLUMNS,
+        "units": {
+            "NO": "ppb",
+            "NO2": "ppb",
+            "O3": "ppm",
+            "NOx": "ppb",
+            "UV": "W m^-2",
+            "SR_W_m2": "W m^-2",
+            "J": "s^-1",
+            "solar_zenith_angle_deg": "degrees",
+            "Temp": "degrees F",
+            "clearing_index": "dimensionless",
+            "LR": "dimensionless",
+            "log10_LR": "dimensionless",
+        },
+        "derivations": {"NOx": "NO + NO2"},
+        "clearing_index_availability": (
+            "joined from the smoke-management archive"
+            if "clearing_index" in data
+            else "unavailable; values are null because SR/CI join was not requested"
+        ),
+    }
     summary["no_threshold_sensitivity"] = sensitivity.replace(
         {np.nan: None}
     ).to_dict(orient="records")
@@ -1087,8 +1196,6 @@ def run_analysis(
     if config.month is None:
         monthly_dir = output_dir / "monthly"
         monthly_dir.mkdir(exist_ok=True)
-        for stale_plot in monthly_dir.glob(f"{config.year}-??_*_timeseries.png"):
-            stale_plot.unlink()
         monthly_rows: list[dict[str, object]] = []
         for month in range(1, 13):
             monthly = data.loc[data.index.month == month]
@@ -1126,6 +1233,7 @@ def run_analysis(
         )
 
     print(f"Saved {len(data)} analyzed rows to {processed_path}")
+    print(f"Saved {len(diagnostics)} hourly diagnostics rows to {diagnostics_path}")
     print(
         "Leighton ratio: "
         f"median={data['LR'].median():.3f}, "
