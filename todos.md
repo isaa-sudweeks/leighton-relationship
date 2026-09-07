@@ -3,22 +3,42 @@
 This checklist consolidates Callum Flowerday's requests from the August 31,
 September 2, and September 4, 2026 `Leighton Relationship Update` emails.
 
+Status was reconciled against `main` at merge commit `f01331b` on September 6,
+2026. The merge completed the provisional uncertainty and JPL kinetics update,
+SZA QC plumbing, available-observation annual runs, and the first requested LR
+plots. It did not implement the downstream excess-oxidation diagnostics.
+
+## Next recommended task
+
+- [ ] Confirm the actual SZA limits of the underlying TUV calibration grid with
+  Callum or its source artifact, then replace the provisional 19.74–50.47°
+  reviewed-May observation span used by the current QC flag. The code already
+  preserves and flags the bounds without dropping extrapolated rows, but the
+  present interval must not be described as the validated TUV range.
+
 ## Analysis foundations and full-period run
 
-- [ ] Use 14.9% as the provisional total relative LR uncertainty in plots and
+- [x] Use 14.9% as the provisional total relative LR uncertainty in plots and
   outputs, calculated point by point so the absolute uncertainty reflects each
-  observation (especially the increased sensitivity at low NO).
-- [ ] Replace the older NO + O3 Arrhenius expression with the JPL Evaluation
-  19-5 recommended rate expression.
-- [ ] Incorporate the JPL uncertainty for the NO + O3 rate term if it can be
+  observation. Implemented as `abs(LR) * 0.149`, with the supplied component
+  budget retained in output metadata.
+- [x] Replace the older NO + O3 Arrhenius expression with the JPL Evaluation
+  19-5 C19 non-Arrhenius rate expression.
+- [x] Incorporate the JPL uncertainty for the NO + O3 rate term if it can be
   done cleanly; otherwise retain the provisional 8% kinetic-term uncertainty.
+  The merged provisional budget explicitly retains the permitted 8% term.
 - [ ] Flag observations whose SZA is outside the validated range of the
-  TUV-based UV-to-J conversion instead of silently extrapolating.
-- [ ] Run the full available Hawthorne dataset after the requested calculation
-  and diagnostics changes are complete.
-- [ ] Keep the SR/clearing-index-filtered analysis as a separate clear-sky
+  TUV-based UV-to-J conversion instead of silently extrapolating. Flagging is
+  implemented, but the actual TUV grid range still needs confirmation; current
+  bounds are explicitly labeled as provisional.
+- [x] Run the available Hawthorne observations for calendar years 2024 and
+  2025 after the requested calculation and diagnostics changes. Coverage
+  metadata explicitly reports missing months rather than claiming complete
+  full-year coverage.
+- [x] Keep the SR/clearing-index-filtered analysis as a separate clear-sky
   sensitivity analysis, and provide an unfiltered comparison rather than using
-  SR/CI filtering to define the primary dataset.
+  SR/CI filtering to define the primary dataset. Separate 2024 and 2025 output
+  directories were generated for both configurations.
 
 ## Annual diagnostics dataset
 
@@ -27,6 +47,8 @@ September 2, and September 4, 2026 `Leighton Relationship Update` emails.
   J(NO2), SZA, temperature, clearing index, LR, and log10(LR). The implemented
   monthly artifact is `hourly_diagnostics_<year>_<month>.parquet`; NOx is
   derived as `NO + NO2`, and clearing index is null when it was not joined.
+  Completed by merge commit `487c5ce`, with schema, artifact-writing, summary,
+  packaging, and regression-test coverage.
 - [ ] Calculate and save Callum's three requested excess-NO2-production
   quantities for each retained hour, using the equations embedded in his
   September 2 email. These quantify NO-to-NO2 production not explained by the
@@ -44,9 +66,9 @@ September 2, and September 4, 2026 `Leighton Relationship Update` emails.
 
 ## Diagnostic plots and statistics
 
-- [ ] Produce monthly hourly LR plots with uncertainty and, if practical, a
+- [x] Produce monthly hourly LR plots with uncertainty and, if practical, a
   full-year hourly LR plot.
-- [ ] Produce monthly hourly log10(LR) plots and, if practical, a full-year
+- [x] Produce monthly hourly log10(LR) plots and, if practical, a full-year
   hourly log10(LR) plot.
 - [ ] Plot LR against NO, NO2, O3, NOx, J, UV, solar radiation, SZA,
   temperature, and clearing index using individual retained observations.
@@ -55,7 +77,7 @@ September 2, and September 4, 2026 `Leighton Relationship Update` emails.
 - [ ] Create a correlation/statistics table for both LR and equivalent ROx
   against the requested predictors, including at least sample count, Pearson
   correlation, Spearman correlation, and appropriate p-values.
-- [ ] Retain separate non-SR/CI-filtered versions of representative plots for
+- [x] Retain separate non-SR/CI-filtered versions of representative plots for
   comparison with the clear-sky sensitivity analysis.
 
 ## Oxidative-regime analysis
@@ -82,4 +104,4 @@ September 2, and September 4, 2026 `Leighton Relationship Update` emails.
   scientific review before finalizing the presentation.
 - [ ] After review, rerun the analysis with any agreed changes.
 - [ ] Format final paper figures to the target journal's standards, including
-      removing plot titles where required.
+  removing plot titles where required.
