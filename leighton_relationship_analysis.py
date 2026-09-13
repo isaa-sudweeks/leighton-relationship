@@ -61,11 +61,16 @@ LANGLEY_PER_MINUTE_TO_W_M2 = 41_840.0 / 60.0
 # zenith angle is in degrees, and J(NO2) is in s^-1.
 TUV_SZA_INTERCEPT_M2_W_S = 1.538e-4
 TUV_SZA_SLOPE_M2_W_S_DEG = 1.951e-6
-J_CALIBRATION_SOURCE = "Callum Flowerday emails dated 2026-08-14 and 2026-08-18"
-# Provisional QC bounds from the SZA span of the reviewed May 2025 development
-# observations. These are not yet confirmed as the underlying TUV grid limits.
-DEFAULT_TUV_QC_SZA_MIN_DEG = 19.74
-DEFAULT_TUV_QC_SZA_MAX_DEG = 50.47
+J_CALIBRATION_SOURCE = (
+    "Callum Flowerday 2026-08-14 "
+    "Leighton_Relationship_J_NO2_Calibration_Handoff.docx, with 2026-08-18 "
+    "email correction"
+)
+# SZA support bounds documented for the six May 21, 2025 NCAR TUV calculations
+# used to derive the provisional single-day transfer function. These bounds do
+# not make the function a universal instrument calibration.
+DEFAULT_TUV_QC_SZA_MIN_DEG = 21.0
+DEFAULT_TUV_QC_SZA_MAX_DEG = 49.8
 
 # Hawthorne AQS site 49-035-3006 coordinates from the source AQS snapshot.
 HAWTHORNE_LATITUDE_DEG = 40.736389
@@ -470,13 +475,13 @@ def calculate_leighton_ratio(
     result["tuv_sza_outside_provisional_qc_range"] = ~result[
         "tuv_sza_within_provisional_qc_range"
     ]
-    # Requested extrapolation flag; the range basis remains explicitly
-    # provisional pending confirmation against the underlying TUV grid.
+    # Requested extrapolation flag; the calibration remains provisional because
+    # its documented support is a single Hawthorne day.
     result["tuv_sza_extrapolated"] = result[
         "tuv_sza_outside_provisional_qc_range"
     ]
     result["tuv_sza_range_basis"] = (
-        "provisional_reviewed_May_2025_observation_span_pending_TUV_grid_confirmation"
+        "documented_six_point_May_21_2025_NCAR_TUV_support_range"
     )
 
     number_density = (
@@ -1059,8 +1064,11 @@ def summarize(
                 config.tuv_qc_sza_min_deg,
                 config.tuv_qc_sza_max_deg,
             ],
-            "tuv_sza_range_status": "provisional_pending_TUV_grid_confirmation",
-            "tuv_sza_range_basis": "reviewed May 2025 observation span",
+            "tuv_sza_range_status": "documented_single_day_TUV_support_range",
+            "tuv_sza_range_basis": (
+                "six May 21, 2025 NCAR TUV calculations in Callum's "
+                "2026-08-14 handoff"
+            ),
             "sza_extrapolated_rows": int(data["tuv_sza_extrapolated"].sum()),
             "sza_method": "NOAA fractional-year solar-position approximation",
             "no_o3_rate_constant_method": "JPL_19-5_C19_non_arrhenius",
@@ -1296,8 +1304,8 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=DEFAULT_TUV_QC_SZA_MIN_DEG,
         help=(
-            "lower provisional QC SZA bound based on the reviewed May 2025 "
-            "observation span (degrees)"
+            "lower bound of the documented May 21, 2025 TUV calculation "
+            "support range (degrees)"
         ),
     )
     parser.add_argument(
@@ -1305,8 +1313,8 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=DEFAULT_TUV_QC_SZA_MAX_DEG,
         help=(
-            "upper provisional QC SZA bound based on the reviewed May 2025 "
-            "observation span (degrees)"
+            "upper bound of the documented May 21, 2025 TUV calculation "
+            "support range (degrees)"
         ),
     )
     parser.add_argument(

@@ -107,12 +107,13 @@ J(NO2) = C(SZA) * UV
 where SZA is in degrees and J(NO2) is in s^-1. The output Parquet preserves
 SZA, the applied coefficient, an explicit provisional-QC/extrapolation flag,
 J(NO2), LR, and log10(LR); `summary.json` records the coefficient parameters
-and provenance. Until the original TUV calibration grid is confirmed, the
-default QC interval is the 19.74–50.47 degree SZA span covered by the reviewed
-May 2025 development observations. It can be changed with `--tuv-sza-min` and
-`--tuv-sza-max`; values outside it are retained and explicitly flagged as
-provisional extrapolations. This replaces the complete legacy
-`7.784e-5 * UV / 2.84 * 10` expression rather than adding another scale factor.
+and provenance. The default QC interval is 21.0–49.8 degrees, the support span
+of the six May 21, 2025 NCAR TUV calculations documented in Callum Flowerday's
+August 14 calibration handoff. The transfer function remains provisional and
+single-day rather than a universal instrument calibration. The interval can be
+changed with `--tuv-sza-min` and `--tuv-sza-max`; values outside it are retained
+and explicitly flagged as provisional extrapolations. This replaces the complete
+legacy `7.784e-5 * UV / 2.84 * 10` expression rather than adding another scale factor.
 Each run also writes `no_threshold_sensitivity.csv` for strict cutoffs at 0,
 0.05, 0.10, 0.20, 0.50, and 1.0 ppb.
 

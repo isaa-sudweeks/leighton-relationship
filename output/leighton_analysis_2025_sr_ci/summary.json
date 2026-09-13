@@ -25,8 +25,8 @@
     "target_airshed": "Northern Wasatch Front",
     "uv_hour_shift": null,
     "uv_alignment_max_shift": 3,
-    "tuv_qc_sza_min_deg": 19.74,
-    "tuv_qc_sza_max_deg": 50.47,
+    "tuv_qc_sza_min_deg": 21.0,
+    "tuv_qc_sza_max_deg": 49.8,
     "ci_history_path": "output/leighton_audit_followup_2026-07-28/full_available_ci_history_air_shed_5.parquet"
   },
   "row_accounting": {
@@ -152,19 +152,19 @@
   },
   "scientific_assumptions_to_validate": {
     "j_calibration_method": "provisional_tuv_sza_linear",
-    "j_calibration_source": "Callum Flowerday emails dated 2026-08-14 and 2026-08-18",
+    "j_calibration_source": "Callum Flowerday 2026-08-14 Leighton_Relationship_J_NO2_Calibration_Handoff.docx, with 2026-08-18 email correction",
     "uv_units": "W m^-2",
     "solar_zenith_angle_units": "degrees",
     "j_units": "s^-1",
     "tuv_sza_intercept_m2_w_s": 0.0001538,
     "tuv_sza_slope_m2_w_s_deg": 1.951e-06,
     "tuv_provisional_qc_sza_range_deg": [
-      19.74,
-      50.47
+      21.0,
+      49.8
     ],
-    "tuv_sza_range_status": "provisional_pending_TUV_grid_confirmation",
-    "tuv_sza_range_basis": "reviewed May 2025 observation span",
-    "sza_extrapolated_rows": 2,
+    "tuv_sza_range_status": "documented_single_day_TUV_support_range",
+    "tuv_sza_range_basis": "six May 21, 2025 NCAR TUV calculations in Callum's 2026-08-14 handoff",
+    "sza_extrapolated_rows": 5,
     "sza_method": "NOAA fractional-year solar-position approximation",
     "no_o3_rate_constant_method": "JPL_19-5_C19_non_arrhenius",
     "no_o3_rate_constant_source": "JPL Evaluation 19-5 (2020), reaction C19",
@@ -193,6 +193,44 @@
     "combination_method": "root_sum_of_squares_assuming_independence",
     "plot_interval_label": "provisional 14.9% total LR uncertainty",
     "row_level_method": "absolute uncertainty = abs(LR) * 0.149"
+  },
+  "hourly_diagnostics": {
+    "path": "hourly_diagnostics_2025_available_observations.parquet",
+    "rows": 44,
+    "columns": [
+      "datetime_local_standard",
+      "datetime_utc",
+      "NO",
+      "NO2",
+      "O3",
+      "NOx",
+      "UV",
+      "SR_W_m2",
+      "J",
+      "solar_zenith_angle_deg",
+      "Temp",
+      "clearing_index",
+      "LR",
+      "log10_LR"
+    ],
+    "units": {
+      "NO": "ppb",
+      "NO2": "ppb",
+      "O3": "ppm",
+      "NOx": "ppb",
+      "UV": "W m^-2",
+      "SR_W_m2": "W m^-2",
+      "J": "s^-1",
+      "solar_zenith_angle_deg": "degrees",
+      "Temp": "degrees F",
+      "clearing_index": "dimensionless",
+      "LR": "dimensionless",
+      "log10_LR": "dimensionless"
+    },
+    "derivations": {
+      "NOx": "NO + NO2"
+    },
+    "clearing_index_availability": "joined from the smoke-management archive"
   },
   "no_threshold_sensitivity": [
     {
