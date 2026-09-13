@@ -8,6 +8,8 @@ import pandas as pd
 
 from leighton_relationship_analysis import (
     AnalysisConfig,
+    DEFAULT_TUV_QC_SZA_MAX_DEG,
+    DEFAULT_TUV_QC_SZA_MIN_DEG,
     JPL_NO_O3_ACTIVATION_OVER_R_K,
     JPL_NO_O3_PREFACTOR,
     JPL_NO_O3_REFERENCE_TEMPERATURE_K,
@@ -30,6 +32,35 @@ from leighton_relationship_analysis import (
 
 
 class LeightonAnalysisTests(unittest.TestCase):
+    def test_default_sza_bounds_match_documented_tuv_support_points(self):
+        self.assertEqual(DEFAULT_TUV_QC_SZA_MIN_DEG, 21.0)
+        self.assertEqual(DEFAULT_TUV_QC_SZA_MAX_DEG, 49.8)
+
+    @patch("leighton_relationship_analysis.calculate_solar_zenith_angle")
+    def test_documented_tuv_support_bounds_are_inclusive(self, mock_sza):
+        index = pd.date_range("2025-05-21 10:00", periods=4, freq="h")
+        mock_sza.return_value = pd.Series([20.9, 21.0, 49.8, 49.9], index=index)
+        data = pd.DataFrame(
+            {
+                "Temp": [70.0] * 4,
+                "UV": [20.0] * 4,
+                "O3": [0.05] * 4,
+                "NO": [1.0] * 4,
+                "NO2": [5.0] * 4,
+                "datetime_utc": pd.date_range(
+                    "2025-05-21 17:00Z", periods=4, freq="h"
+                ),
+            },
+            index=index,
+        )
+
+        result = calculate_leighton_ratio(data)
+
+        self.assertEqual(
+            result["tuv_sza_extrapolated"].tolist(),
+            [True, False, False, True],
+        )
+
     def test_stale_analysis_artifacts_are_cleared_across_period_modes(self):
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary)

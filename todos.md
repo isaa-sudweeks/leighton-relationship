@@ -10,11 +10,9 @@ plots. It did not implement the downstream excess-oxidation diagnostics.
 
 ## Next recommended task
 
-- [ ] Confirm the actual SZA limits of the underlying TUV calibration grid with
-  Callum or its source artifact, then replace the provisional 19.74–50.47°
-  reviewed-May observation span used by the current QC flag. The code already
-  preserves and flags the bounds without dropping extrapolated rows, but the
-  present interval must not be described as the validated TUV range.
+- [ ] Transcribe and verify the excess-NO2-production equations, units, and
+  positivity conditions embedded in Callum's September 2 email before adding
+  the downstream oxidation diagnostics.
 
 ## Analysis foundations and full-period run
 
@@ -27,10 +25,11 @@ plots. It did not implement the downstream excess-oxidation diagnostics.
 - [x] Incorporate the JPL uncertainty for the NO + O3 rate term if it can be
   done cleanly; otherwise retain the provisional 8% kinetic-term uncertainty.
   The merged provisional budget explicitly retains the permitted 8% term.
-- [ ] Flag observations whose SZA is outside the validated range of the
-  TUV-based UV-to-J conversion instead of silently extrapolating. Flagging is
-  implemented, but the actual TUV grid range still needs confirmation; current
-  bounds are explicitly labeled as provisional.
+- [x] Flag observations whose SZA is outside the documented support range of
+  the TUV-based UV-to-J conversion instead of silently extrapolating. Callum's
+  August 14 handoff documents six May 21 TUV calculations spanning 21.0–49.8°.
+  Rows outside that inclusive range remain available and are flagged. The
+  transfer function remains explicitly provisional and single-day.
 - [x] Run the available Hawthorne observations for calendar years 2024 and
   2025 after the requested calculation and diagnostics changes. Coverage
   metadata explicitly reports missing months rather than claiming complete
