@@ -91,7 +91,10 @@ python leighton_relationship_analysis.py
 It writes the processed dataset for the configured period, a compact hourly
 diagnostics table, a JSON summary, LR and log10(LR) time series, relationship
 plots, non-overlapping clock-window distributions, and the temperature
-correction plot under `output/leighton_analysis/`.
+correction plot under `output/leighton_analysis/`. It also writes
+`ho2_inferred_diagnostic.png`, whose upper panel reports inferred HO2 only for
+positive inferred excess production and whose lower panel retains the signed
+calculation for audit, including zero and negative values.
 
 The primary calculation uses Hawthorne local standard time from 10:00 through
 16:00 (inclusive) and requires strict NO > 0.20 ppb, following the August 14 and 18,
@@ -163,6 +166,16 @@ does not include one. `summary.json` records this limitation and the exact
 returned-code inventory; adding a smoke indicator requires a documented source
 expansion rather than interpreting an existing variable as a proxy.
 
+Each hourly diagnostics row also has an `oxidative_regime` classification:
+`LR < 1`, `1 <= LR < 1.5`, `1.5 <= LR < 2`, or `LR >= 2`. Missing or
+non-finite LR values remain unclassified. The period-specific
+`oxidative_regime_summary_<period>.csv` provides one row per regime-variable
+pair for NO, NO2, O3, NOx, J, UV, solar radiation, SZA, temperature, and
+clearing index. It records units, total regime rows, valid and missing counts,
+mean, sample standard deviation, minimum, quartiles, median, and maximum.
+Empty regimes and entirely missing variables are retained explicitly. These
+outputs are descriptive and do not assign atmospheric meaning to a regime.
+
 The generalized organic RO2 and Jaron HO2 rate expressions are intentionally
 different:
 
@@ -171,9 +184,33 @@ k_RO2+NO(T) = 2.7e-12 * exp(360 / T)
 k_HO2+NO(T) = 3.44e-12 * exp(260 / T)
 ```
 
+The inferred-HO2 figure is a diagnostic, not a corrected Leighton
+relationship. No corrected relationship is calculated because its precise
+definition still requires clarification from Callum and Jaron.
+
 Each successful run removes period-specific artifacts left by an earlier run
 in the same output directory before writing the new result. Unrelated files
 are preserved.
+
+Each run also writes `condition_correlations.csv`,
+`condition_report_metadata.json`, and 16 pairwise scatterplots. The report
+compares LR with NO, NO2, O3, NOx, J, UV, solar radiation, SZA, temperature,
+and clearing index, and compares equivalent RO2 with NOx, temperature, UV,
+solar radiation, J, and clearing index. Every table row reports the total input
+rows, pairwise-valid sample count, excluded missing/non-finite count, Pearson
+`r` and two-sided p-value, Spearman `rho` and two-sided p-value, and a status.
+Correlations are left missing and the status explains why when fewer than
+three valid pairs remain or either input is constant. The plots and table are
+descriptive outputs only and do not assign atmospheric causes.
+
+The same report can be regenerated independently from a diagnostics artifact:
+
+```bash
+python condition_statistics.py \
+  output/leighton_analysis_2025_unfiltered/hourly_diagnostics_2025_available_observations.parquet \
+  --output-dir output/leighton_analysis_2025_unfiltered \
+  --context "2025 available observations"
+```
 
 Apply the collocated AQS solar-radiation and Northern Wasatch Front
 clearing-index filters with:

@@ -11,12 +11,19 @@ class DeliverablePackageTests(unittest.TestCase):
                 "hourly_diagnostics": {
                     "path": "hourly_diagnostics_2024_06.parquet"
                 },
+                "ho2_diagnostic": {"path": "ho2_inferred_diagnostic.png"},
             }
         )
 
         self.assertIn("leighton_ratio_2024_06.parquet", artifacts)
         self.assertIn("hourly_diagnostics_2024_06.parquet", artifacts)
+        self.assertIn("ho2_inferred_diagnostic.png", artifacts)
         self.assertNotIn("leighton_ratio_may_2025.parquet", artifacts)
+
+    def test_legacy_outputs_do_not_require_unrecorded_ho2_figure(self):
+        artifacts = expected_artifacts({})
+
+        self.assertNotIn("ho2_inferred_diagnostic.png", artifacts)
 
     def test_expected_artifacts_support_available_year_outputs(self):
         artifacts = expected_artifacts(
@@ -24,6 +31,10 @@ class DeliverablePackageTests(unittest.TestCase):
                 "configuration": {"year": 2025, "month": None},
                 "hourly_diagnostics": {
                     "path": "hourly_diagnostics_2025_available_observations.parquet"
+                },
+                "condition_report": {
+                    "statistics": "condition_correlations.csv",
+                    "plots": ["lr_vs_no.png", "rox_equiv_vs_clearing_index.png"],
                 },
             }
         )
@@ -33,6 +44,35 @@ class DeliverablePackageTests(unittest.TestCase):
         )
         self.assertIn(
             "hourly_diagnostics_2025_available_observations.parquet", artifacts
+        )
+        self.assertIn("condition_correlations.csv", artifacts)
+        self.assertIn("rox_equiv_vs_clearing_index.png", artifacts)
+
+    def test_legacy_outputs_do_not_require_unrecorded_condition_report(self):
+        artifacts = expected_artifacts({})
+
+        self.assertNotIn("condition_correlations.csv", artifacts)
+        self.assertNotIn("condition_report_metadata.json", artifacts)
+
+    def test_expected_artifacts_include_oxidative_regime_summary(self):
+        artifacts = expected_artifacts(
+            {
+                "configuration": {"year": 2025, "month": None},
+                "hourly_diagnostics": {
+                    "path": "hourly_diagnostics_2025_available_observations.parquet"
+                },
+                "oxidative_regimes": {
+                    "path": (
+                        "oxidative_regime_summary_"
+                        "2025_available_observations.csv"
+                    )
+                },
+            }
+        )
+
+        self.assertIn(
+            "oxidative_regime_summary_2025_available_observations.csv",
+            artifacts,
         )
 
     def test_accepts_only_sr_ci_switch_difference(self):

@@ -27,6 +27,7 @@ from leighton_relationship_analysis import (
     calculate_tuv_j_no2,
     clear_stale_analysis_artifacts,
     evaluate_uv_alignment,
+    plot_ho2_diagnostic,
     plot_ratio_distributions,
     period_label,
     run_analysis,
@@ -132,6 +133,8 @@ class LeightonAnalysisTests(unittest.TestCase):
             stale = [
                 output / "leighton_ratio_2025_available_observations.parquet",
                 output / "hourly_diagnostics_2025_available_observations.parquet",
+                output
+                / "oxidative_regime_summary_2025_available_observations.csv",
                 output / "monthly_summary.csv",
                 monthly / "2025-05_leighton_ratio_timeseries.png",
                 monthly / "2024-05_log10_leighton_ratio_timeseries.png",
@@ -447,6 +450,7 @@ class LeightonAnalysisTests(unittest.TestCase):
                 "Temp",
                 "clearing_index",
                 "LR",
+                "oxidative_regime",
                 "log10_LR",
                 "k_no_o3_cm3_molecule_s",
                 "P_o3_molecules_cm3_s",
@@ -465,6 +469,7 @@ class LeightonAnalysisTests(unittest.TestCase):
         )
         self.assertEqual(result.loc[0, "NOx"], 6.0)
         self.assertEqual(result.loc[0, "clearing_index"], 850)
+        self.assertEqual(result.loc[0, "oxidative_regime"], "1.5 <= LR < 2")
 
     def test_hourly_diagnostics_marks_unavailable_clearing_index_as_missing(self):
         data = pd.DataFrame(
@@ -555,6 +560,8 @@ class LeightonAnalysisTests(unittest.TestCase):
         ), patch(
             "leighton_relationship_analysis.plot_log_ratio_timeseries"
         ), patch(
+            "leighton_relationship_analysis.plot_ho2_diagnostic"
+        ) as mock_ho2_plot, patch(
             "leighton_relationship_analysis.plot_lr_relationship"
         ), patch(
             "leighton_relationship_analysis.plot_ratio_distributions"
@@ -573,8 +580,12 @@ class LeightonAnalysisTests(unittest.TestCase):
 
             processed = output / "leighton_ratio_2024_06.parquet"
             diagnostics_path = output / "hourly_diagnostics_2024_06.parquet"
+            regime_summary_path = (
+                output / "oxidative_regime_summary_2024_06.csv"
+            )
             self.assertTrue(processed.is_file())
             self.assertTrue(diagnostics_path.is_file())
+            self.assertTrue(regime_summary_path.is_file())
             self.assertFalse((output / "leighton_ratio_may_2025.parquet").exists())
             diagnostics = pd.read_parquet(diagnostics_path)
             self.assertEqual(len(diagnostics), 1)
@@ -592,6 +603,27 @@ class LeightonAnalysisTests(unittest.TestCase):
                 "not_retrieved_unverified",
             )
             self.assertIn("partial", summary["uncertainty"]["scope"])
+            self.assertEqual(
+                summary["ho2_diagnostic"]["path"],
+                "ho2_inferred_diagnostic.png",
+            )
+            self.assertEqual(summary["ho2_diagnostic"]["positive_excess_rows"], 1)
+            mock_ho2_plot.assert_called_once()
+            plot_data, plot_config, plot_destination = mock_ho2_plot.call_args.args
+            pd.testing.assert_frame_equal(plot_data, calculated)
+            self.assertEqual(plot_config, AnalysisConfig(year=2024, month=6))
+            self.assertEqual(
+                plot_destination,
+                output / "ho2_inferred_diagnostic.png",
+            )
+            self.assertEqual(
+                summary["oxidative_regimes"]["path"],
+                regime_summary_path.name,
+            )
+            self.assertEqual(
+                summary["oxidative_regimes"]["counts"]["1.5 <= LR < 2"],
+                1,
+            )
 
     def test_time_windows_are_non_overlapping_and_exhaustive(self):
         data = pd.DataFrame(
@@ -627,6 +659,38 @@ class LeightonAnalysisTests(unittest.TestCase):
                 output,
             )
             self.assertTrue(output.exists())
+
+    def test_ho2_diagnostic_plots_positive_and_signed_series(self):
+        data = pd.DataFrame(
+            {
+                "HO2_inferred_molecules_cm3": [1.2e9, pd.NA, 2.4e9],
+                "HO2_inferred_signed_molecules_cm3": [1.2e9, -0.8e9, 2.4e9],
+            },
+            index=pd.date_range("2025-05-01 10:00", periods=3, freq="h"),
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "ho2_inferred_diagnostic.png"
+            plot_ho2_diagnostic(data, AnalysisConfig(), output)
+
+            self.assertTrue(output.is_file())
+            self.assertGreater(output.stat().st_size, 0)
+
+    def test_ho2_diagnostic_handles_no_positive_excess_values(self):
+        data = pd.DataFrame(
+            {
+                "HO2_inferred_molecules_cm3": [pd.NA, pd.NA],
+                "HO2_inferred_signed_molecules_cm3": [-1.0e9, 0.0],
+            },
+            index=pd.date_range("2025-05-01 10:00", periods=2, freq="h"),
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "ho2_inferred_diagnostic.png"
+            plot_ho2_diagnostic(data, AnalysisConfig(), output)
+
+            self.assertTrue(output.is_file())
+            self.assertGreater(output.stat().st_size, 0)
 
     def test_uv_alignment_selects_shift_with_best_solar_agreement(self):
         timestamps = pd.date_range("2025-05-01", periods=48, freq="h")

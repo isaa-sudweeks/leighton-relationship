@@ -26,11 +26,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from condition_statistics import generate_condition_report
 from lr_uncertainty import (
     PROVISIONAL_LR_RELATIVE_UNCERTAINTIES,
     PROVISIONAL_TOTAL_LR_RELATIVE_UNCERTAINTY,
     add_quantified_lr_uncertainty,
     combine_independent_relative_uncertainties,
+)
+from oxidative_regimes import (
+    OXIDATIVE_REGIME_LABELS,
+    OXIDATIVE_REGIME_VARIABLE_UNITS,
+    classify_oxidative_regime,
+    summarize_oxidative_regimes,
 )
 from sr_ci_filter import apply_sr_ci_filters
 
@@ -98,6 +105,7 @@ DIAGNOSTIC_COLUMNS = [
     "Temp",
     "clearing_index",
     "LR",
+    "oxidative_regime",
     "log10_LR",
     "k_no_o3_cm3_molecule_s",
     "P_o3_molecules_cm3_s",
@@ -675,6 +683,9 @@ def build_hourly_diagnostics(data: pd.DataFrame) -> pd.DataFrame:
     diagnostics["NOx"] = diagnostics["NO"] + diagnostics["NO2"]
     if "clearing_index" not in diagnostics:
         diagnostics["clearing_index"] = pd.NA
+    diagnostics["oxidative_regime"] = classify_oxidative_regime(
+        diagnostics["LR"]
+    )
     return diagnostics.loc[:, DIAGNOSTIC_COLUMNS]
 
 
@@ -684,6 +695,7 @@ def clear_stale_analysis_artifacts(output_dir: Path) -> None:
     for pattern in (
         "leighton_ratio_*.parquet",
         "hourly_diagnostics_*.parquet",
+        "oxidative_regime_summary_*.csv",
     ):
         for path in output_dir.glob(pattern):
             path.unlink()
@@ -861,6 +873,141 @@ def plot_log_ratio_timeseries(
     axis.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
     axis.legend(frameon=False, loc="upper left")
     _style_axis(axis)
+    fig.savefig(destination, dpi=180, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+
+
+def plot_ho2_diagnostic(
+    data: pd.DataFrame,
+    config: AnalysisConfig,
+    destination: Path,
+) -> None:
+    """Plot positive-excess inferred HO2 and retain signed values for audit.
+
+    ``HO2_inferred_molecules_cm3`` is the reportable diagnostic and is null
+    unless inferred excess production is positive.  The second panel shows the
+    corresponding signed calculation so zero and negative results remain
+    visible rather than being silently omitted.
+    """
+
+    required = {
+        "HO2_inferred_molecules_cm3",
+        "HO2_inferred_signed_molecules_cm3",
+    }
+    missing = sorted(required.difference(data.columns))
+    if missing:
+        raise ValueError(
+            "HO2 diagnostic plot is missing required columns: "
+            + ", ".join(missing)
+        )
+
+    positive_values = pd.to_numeric(
+        data["HO2_inferred_molecules_cm3"], errors="coerce"
+    )
+    positive = data.loc[
+        positive_values.gt(0.0) & np.isfinite(positive_values)
+    ].copy()
+    signed_values = pd.to_numeric(
+        data["HO2_inferred_signed_molecules_cm3"], errors="coerce"
+    )
+    signed = data.loc[signed_values.notna() & np.isfinite(signed_values)].copy()
+
+    fig, axes = plt.subplots(2, 1, figsize=(11, 8.2), sharex=True)
+    fig.subplots_adjust(left=0.11, right=0.985, top=0.86, bottom=0.12, hspace=0.20)
+    fig.suptitle(
+        f"Inferred HO2 Diagnostic at Hawthorne — {period_label(config)}",
+        x=0.11,
+        y=0.965,
+        ha="left",
+        fontsize=16,
+        fontweight="bold",
+        color="#111827",
+    )
+    fig.text(
+        0.11,
+        0.91,
+        (
+            f"n={len(positive)} positive-excess values from {len(data)} retained "
+            "hourly observations · diagnostic only"
+        ),
+        fontsize=10,
+        color="#4B5563",
+    )
+
+    positive_axis, signed_axis = axes
+    if positive.empty:
+        positive_axis.text(
+            0.5,
+            0.5,
+            "No positive-excess inferred HO2 values",
+            transform=positive_axis.transAxes,
+            ha="center",
+            va="center",
+            fontsize=12,
+            color="#6B7280",
+        )
+    else:
+        positive_axis.scatter(
+            positive.index,
+            positive["HO2_inferred_molecules_cm3"],
+            s=25,
+            color="#059669",
+            edgecolors="#065F46",
+            linewidths=0.35,
+            alpha=0.72,
+        )
+    positive_axis.set_ylabel("Positive-excess inferred HO2\n(molecule cm$^{-3}$)")
+    positive_axis.set_title(
+        "Reported positive-excess diagnostic", loc="left", fontsize=12
+    )
+    positive_axis.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+    _style_axis(positive_axis)
+
+    if signed.empty:
+        signed_axis.text(
+            0.5,
+            0.5,
+            "No finite signed inferred HO2 values",
+            transform=signed_axis.transAxes,
+            ha="center",
+            va="center",
+            fontsize=12,
+            color="#6B7280",
+        )
+    else:
+        signed_axis.scatter(
+            signed.index,
+            signed["HO2_inferred_signed_molecules_cm3"],
+            s=21,
+            color="#2563EB",
+            edgecolors="#1E3A8A",
+            linewidths=0.3,
+            alpha=0.62,
+        )
+    signed_axis.axhline(0.0, color="#374151", linewidth=1.2, linestyle="--")
+    signed_axis.set_title(
+        "Signed calculation retained for audit", loc="left", fontsize=12
+    )
+    signed_axis.set_ylabel("Signed inferred HO2\n(molecule cm$^{-3}$)")
+    signed_axis.set_xlabel("Local Standard Time")
+    signed_axis.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+    locator = mdates.AutoDateLocator(minticks=5, maxticks=10)
+    signed_axis.xaxis.set_major_locator(locator)
+    signed_axis.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+    _style_axis(signed_axis)
+
+    fig.text(
+        0.985,
+        0.025,
+        (
+            "A corrected Leighton relationship is not shown; its definition "
+            "requires Callum/Jaron clarification."
+        ),
+        ha="right",
+        va="bottom",
+        fontsize=8,
+        color="#6B7280",
+    )
     fig.savefig(destination, dpi=180, bbox_inches="tight", facecolor="white")
     plt.close(fig)
 
@@ -1274,11 +1421,23 @@ def run_analysis(
     distributions_path = output_dir / "leighton_ratio_distributions.png"
     correction_path = output_dir / "temperature_correction.png"
     alignment_path = output_dir / "uv_alignment_diagnostic.png"
+    ho2_diagnostic_path = output_dir / "ho2_inferred_diagnostic.png"
     no_sensitivity_path = output_dir / "no_threshold_sensitivity.csv"
+    regime_summary_path = (
+        output_dir / f"oxidative_regime_summary_{period_slug}.csv"
+    )
 
     data.reset_index().to_parquet(processed_path, index=False)
     diagnostics = build_hourly_diagnostics(data)
     diagnostics.to_parquet(diagnostics_path, index=False)
+    regime_summary = summarize_oxidative_regimes(diagnostics)
+    regime_summary.to_csv(regime_summary_path, index=False)
+    condition_report = generate_condition_report(
+        diagnostics,
+        output_dir,
+        context=period_label(config),
+        source_name=diagnostics_path.name,
+    )
     sensitivity.to_csv(no_sensitivity_path, index=False)
     summary = summarize(data, daytime, outside, accounting, config)
     summary["source_provenance"] = summarize_aqs_source_provenance(aqs_path)
@@ -1298,6 +1457,7 @@ def run_analysis(
             "Temp": "degrees F",
             "clearing_index": "dimensionless",
             "LR": "dimensionless",
+            "oxidative_regime": "categorical LR interval",
             "log10_LR": "dimensionless",
             "k_no_o3_cm3_molecule_s": "cm^3 molecule^-1 s^-1",
             "P_o3_molecules_cm3_s": "molecule cm^-3 s^-1",
@@ -1336,12 +1496,62 @@ def run_analysis(
             else "unavailable; values are null because SR/CI join was not requested"
         ),
     }
+    regime_counts = diagnostics["oxidative_regime"].value_counts(sort=False)
+    summary["oxidative_regimes"] = {
+        "path": regime_summary_path.name,
+        "classification_column": "oxidative_regime",
+        "intervals": list(OXIDATIVE_REGIME_LABELS),
+        "classified_rows": int(diagnostics["oxidative_regime"].notna().sum()),
+        "unclassified_rows": int(diagnostics["oxidative_regime"].isna().sum()),
+        "counts": {
+            label: int(regime_counts.get(label, 0))
+            for label in OXIDATIVE_REGIME_LABELS
+        },
+        "variables": dict(OXIDATIVE_REGIME_VARIABLE_UNITS),
+        "statistics": [
+            "regime_rows",
+            "valid_count",
+            "missing_count",
+            "mean",
+            "std",
+            "min",
+            "p25",
+            "median",
+            "p75",
+            "max",
+        ],
+        "scope": "descriptive statistics only; no atmospheric interpretation",
+    }
+    summary["condition_report"] = condition_report
     summary["no_threshold_sensitivity"] = sensitivity.replace(
         {np.nan: None}
     ).to_dict(orient="records")
+    positive_ho2 = pd.to_numeric(
+        data["HO2_inferred_molecules_cm3"], errors="coerce"
+    )
+    signed_ho2 = pd.to_numeric(
+        data["HO2_inferred_signed_molecules_cm3"], errors="coerce"
+    )
+    summary["ho2_diagnostic"] = {
+        "path": ho2_diagnostic_path.name,
+        "positive_excess_rows": int(
+            (positive_ho2.gt(0.0) & np.isfinite(positive_ho2)).sum()
+        ),
+        "signed_audit_rows": int(np.isfinite(signed_ho2).sum()),
+        "reported_series": (
+            "HO2_inferred_molecules_cm3; populated only where "
+            "P_excess_molecules_cm3_s > 0"
+        ),
+        "audit_series": "HO2_inferred_signed_molecules_cm3",
+        "limitation": (
+            "No corrected Leighton relationship is calculated; its definition "
+            "requires Callum/Jaron clarification."
+        ),
+    }
     summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     plot_ratio_timeseries(data, config, timeseries_path)
     plot_log_ratio_timeseries(data, config, log_timeseries_path)
+    plot_ho2_diagnostic(data, config, ho2_diagnostic_path)
     plot_ratio_distributions(daytime, outside, config, distributions_path)
     plot_temperature_correction(data, correction_path)
     plot_uv_alignment_diagnostic(
@@ -1400,6 +1610,7 @@ def run_analysis(
 
     print(f"Saved {len(data)} analyzed rows to {processed_path}")
     print(f"Saved {len(diagnostics)} hourly diagnostics rows to {diagnostics_path}")
+    print(f"Saved oxidative-regime summaries to {regime_summary_path}")
     print(
         "Leighton ratio: "
         f"median={data['LR'].median():.3f}, "
