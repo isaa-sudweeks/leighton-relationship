@@ -34,6 +34,8 @@ class DeliverablePackageTests(unittest.TestCase):
         self.assertIn(
             "hourly_diagnostics_2025_available_observations.parquet", artifacts
         )
+        self.assertIn("condition_correlations.csv", artifacts)
+        self.assertIn("rox_equiv_vs_clearing_index.png", artifacts)
 
     def test_accepts_only_sr_ci_switch_difference(self):
         primary = {"configuration": {"year": 2025, "apply_sr_ci": False}}

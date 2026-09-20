@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from condition_statistics import generate_condition_report
 from lr_uncertainty import (
     PROVISIONAL_LR_RELATIVE_UNCERTAINTIES,
     PROVISIONAL_TOTAL_LR_RELATIVE_UNCERTAINTY,
@@ -1214,6 +1215,12 @@ def run_analysis(
     data.reset_index().to_parquet(processed_path, index=False)
     diagnostics = build_hourly_diagnostics(data)
     diagnostics.to_parquet(diagnostics_path, index=False)
+    condition_report = generate_condition_report(
+        diagnostics,
+        output_dir,
+        context=period_label(config),
+        source_name=diagnostics_path.name,
+    )
     sensitivity.to_csv(no_sensitivity_path, index=False)
     summary = summarize(data, daytime, outside, accounting, config)
     summary["hourly_diagnostics"] = {
@@ -1270,6 +1277,7 @@ def run_analysis(
             else "unavailable; values are null because SR/CI join was not requested"
         ),
     }
+    summary["condition_report"] = condition_report
     summary["no_threshold_sensitivity"] = sensitivity.replace(
         {np.nan: None}
     ).to_dict(orient="records")

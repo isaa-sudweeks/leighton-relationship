@@ -16,7 +16,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-
 COMMON_EXPECTED_ARTIFACTS = (
     "summary.json",
     "no_threshold_sensitivity.csv",
@@ -24,6 +23,24 @@ COMMON_EXPECTED_ARTIFACTS = (
     "leighton_ratio_distributions.png",
     "temperature_correction.png",
     "uv_alignment_diagnostic.png",
+    "condition_correlations.csv",
+    "condition_report_metadata.json",
+    "lr_vs_no.png",
+    "lr_vs_no2.png",
+    "lr_vs_o3.png",
+    "lr_vs_nox.png",
+    "lr_vs_j.png",
+    "lr_vs_uv.png",
+    "lr_vs_solar_radiation.png",
+    "lr_vs_sza.png",
+    "lr_vs_temperature.png",
+    "lr_vs_clearing_index.png",
+    "rox_equiv_vs_nox.png",
+    "rox_equiv_vs_temperature.png",
+    "rox_equiv_vs_uv.png",
+    "rox_equiv_vs_solar_radiation.png",
+    "rox_equiv_vs_j.png",
+    "rox_equiv_vs_clearing_index.png",
 )
 SOURCE_AUDIT_ARTIFACTS = (
     "manifest.json",
