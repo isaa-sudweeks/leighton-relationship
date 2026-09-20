@@ -85,6 +85,11 @@ def matched_configuration(
     sensitivity_config = dict(sensitivity.get("configuration", {}))
     primary_switch = primary_config.pop("apply_sr_ci", None)
     sensitivity_switch = sensitivity_config.pop("apply_sr_ci", None)
+    # The clearing-index archive is an input to the SR/CI sensitivity only.
+    # Its path is therefore expected to be absent from the unfiltered run and
+    # present in the filtered run; it is not a scientific-setting mismatch.
+    primary_config.pop("ci_history_path", None)
+    sensitivity_config.pop("ci_history_path", None)
     differences = {
         key: {"primary": primary_config.get(key), "sr_ci": sensitivity_config.get(key)}
         for key in sorted(set(primary_config) | set(sensitivity_config))

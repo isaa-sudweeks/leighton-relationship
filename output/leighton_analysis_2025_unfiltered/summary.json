@@ -166,6 +166,7 @@
   },
   "uncertainty": {
     "status": "provisional_total_relative_uncertainty",
+    "scope": "partial; not a complete monitor-specific uncertainty budget",
     "source": "Callum Flowerday email dated 2026-08-31",
     "quantified_relative_components": {
       "UV measurement": 0.055,
@@ -180,7 +181,46 @@
     "combined_quantified_relative_uncertainty": 0.149,
     "combination_method": "root_sum_of_squares_assuming_independence",
     "plot_interval_label": "provisional 14.9% total LR uncertainty",
-    "row_level_method": "absolute uncertainty = abs(LR) * 0.149"
+    "row_level_method": "absolute uncertainty = abs(LR) * 0.149",
+    "monitor_specific_aqs_qa_status": "not_retrieved_unverified"
+  },
+  "source_provenance": {
+    "analysis_source_path": "data/downloads/Hawthorne/20240101_20260728_20260729T004631Z/aqs_analysis_ready.parquet",
+    "manifest_path": "data/downloads/Hawthorne/20240101_20260728_20260729T004631Z/manifest.json",
+    "manifest_status": "available",
+    "monitor_specific_aqs_qa": {
+      "status": "not_retrieved_unverified",
+      "note": "Monitor-specific AQS QA and uncertainty records were not retrieved for this analysis."
+    },
+    "download_id": "20240101_20260728_20260729T004631Z",
+    "requested_parameter_codes": [
+      "44201",
+      "42601",
+      "42602",
+      "63301",
+      "62101",
+      "63302"
+    ],
+    "returned_parameter_codes": [
+      "42601",
+      "42602",
+      "44201",
+      "62101",
+      "63301"
+    ],
+    "missing_parameter_codes": [
+      "63302"
+    ],
+    "smoke_indicator": {
+      "status": "not_available_in_source_snapshot",
+      "added_to_diagnostics": false,
+      "pm25_parameter_codes_checked": [
+        "88101",
+        "88502"
+      ],
+      "available_pm25_parameter_codes": [],
+      "note": "No PM2.5 parameter is present and no returned variable has been designated as another defensible smoke indicator."
+    }
   },
   "hourly_diagnostics": {
     "path": "hourly_diagnostics_2025_available_observations.parquet",
@@ -199,6 +239,7 @@
       "Temp",
       "clearing_index",
       "LR",
+      "oxidative_regime",
       "log10_LR",
       "k_no_o3_cm3_molecule_s",
       "P_o3_molecules_cm3_s",
@@ -226,6 +267,7 @@
       "Temp": "degrees F",
       "clearing_index": "dimensionless",
       "LR": "dimensionless",
+      "oxidative_regime": "categorical LR interval",
       "log10_LR": "dimensionless",
       "k_no_o3_cm3_molecule_s": "cm^3 molecule^-1 s^-1",
       "P_o3_molecules_cm3_s": "molecule cm^-3 s^-1",
@@ -253,6 +295,82 @@
       "LR_robustly_gt_1": "LR - LR quantified absolute uncertainty > 1"
     },
     "clearing_index_availability": "unavailable; values are null because SR/CI join was not requested"
+  },
+  "oxidative_regimes": {
+    "path": "oxidative_regime_summary_2025_available_observations.csv",
+    "classification_column": "oxidative_regime",
+    "intervals": [
+      "LR < 1",
+      "1 <= LR < 1.5",
+      "1.5 <= LR < 2",
+      "LR >= 2"
+    ],
+    "classified_rows": 403,
+    "unclassified_rows": 0,
+    "counts": {
+      "LR < 1": 166,
+      "1 <= LR < 1.5": 141,
+      "1.5 <= LR < 2": 65,
+      "LR >= 2": 31
+    },
+    "variables": {
+      "NO": "ppb",
+      "NO2": "ppb",
+      "O3": "ppm",
+      "NOx": "ppb",
+      "J": "s^-1",
+      "UV": "W m^-2",
+      "SR_W_m2": "W m^-2",
+      "solar_zenith_angle_deg": "degrees",
+      "Temp": "degrees F",
+      "clearing_index": "dimensionless"
+    },
+    "statistics": [
+      "regime_rows",
+      "valid_count",
+      "missing_count",
+      "mean",
+      "std",
+      "min",
+      "p25",
+      "median",
+      "p75",
+      "max"
+    ],
+    "scope": "descriptive statistics only; no atmospheric interpretation"
+  },
+  "condition_report": {
+    "schema_version": 1,
+    "purpose": "Descriptive condition plots and pairwise correlations; no scientific interpretation",
+    "source": "hourly_diagnostics_2025_available_observations.parquet",
+    "context": "2025 available observations",
+    "input_rows": 403,
+    "relationships": 16,
+    "statistics": "condition_correlations.csv",
+    "plots": [
+      "lr_vs_no.png",
+      "lr_vs_no2.png",
+      "lr_vs_o3.png",
+      "lr_vs_nox.png",
+      "lr_vs_j.png",
+      "lr_vs_uv.png",
+      "lr_vs_solar_radiation.png",
+      "lr_vs_sza.png",
+      "lr_vs_temperature.png",
+      "lr_vs_clearing_index.png",
+      "rox_equiv_vs_nox.png",
+      "rox_equiv_vs_temperature.png",
+      "rox_equiv_vs_uv.png",
+      "rox_equiv_vs_solar_radiation.png",
+      "rox_equiv_vs_j.png",
+      "rox_equiv_vs_clearing_index.png"
+    ],
+    "status_counts": {
+      "ok": 14,
+      "insufficient_pairs": 2
+    },
+    "missing_value_policy": "Each relationship independently excludes rows where either value is missing, non-numeric, or non-finite.",
+    "statistics_policy": "Pearson r and two-sided p-value plus Spearman rho and two-sided p-value are reported only for at least three pairwise-valid rows with non-constant predictor and response."
   },
   "no_threshold_sensitivity": [
     {
@@ -303,5 +421,13 @@
       "p90_lr": 1.0559272124173205,
       "max_lr": 1.1912554905290456
     }
-  ]
+  ],
+  "ho2_diagnostic": {
+    "path": "ho2_inferred_diagnostic.png",
+    "positive_excess_rows": 237,
+    "signed_audit_rows": 403,
+    "reported_series": "HO2_inferred_molecules_cm3; populated only where P_excess_molecules_cm3_s > 0",
+    "audit_series": "HO2_inferred_signed_molecules_cm3",
+    "limitation": "No corrected Leighton relationship is calculated; its definition requires Callum/Jaron clarification."
+  }
 }

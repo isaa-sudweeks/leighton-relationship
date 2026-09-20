@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "purpose": "Descriptive condition plots and pairwise correlations; no scientific interpretation",
+  "source": "hourly_diagnostics_2024_available_observations.parquet",
+  "context": "2024 available observations",
+  "input_rows": 87,
+  "relationships": 16,
+  "statistics": "condition_correlations.csv",
+  "plots": [
+    "lr_vs_no.png",
+    "lr_vs_no2.png",
+    "lr_vs_o3.png",
+    "lr_vs_nox.png",
+    "lr_vs_j.png",
+    "lr_vs_uv.png",
+    "lr_vs_solar_radiation.png",
+    "lr_vs_sza.png",
+    "lr_vs_temperature.png",
+    "lr_vs_clearing_index.png",
+    "rox_equiv_vs_nox.png",
+    "rox_equiv_vs_temperature.png",
+    "rox_equiv_vs_uv.png",
+    "rox_equiv_vs_solar_radiation.png",
+    "rox_equiv_vs_j.png",
+    "rox_equiv_vs_clearing_index.png"
+  ],
+  "status_counts": {
+    "ok": 16
+  },
+  "missing_value_policy": "Each relationship independently excludes rows where either value is missing, non-numeric, or non-finite.",
+  "statistics_policy": "Pearson r and two-sided p-value plus Spearman rho and two-sided p-value are reported only for at least three pairwise-valid rows with non-constant predictor and response."
+}
