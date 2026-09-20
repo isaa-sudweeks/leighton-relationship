@@ -23,24 +23,6 @@ COMMON_EXPECTED_ARTIFACTS = (
     "leighton_ratio_distributions.png",
     "temperature_correction.png",
     "uv_alignment_diagnostic.png",
-    "condition_correlations.csv",
-    "condition_report_metadata.json",
-    "lr_vs_no.png",
-    "lr_vs_no2.png",
-    "lr_vs_o3.png",
-    "lr_vs_nox.png",
-    "lr_vs_j.png",
-    "lr_vs_uv.png",
-    "lr_vs_solar_radiation.png",
-    "lr_vs_sza.png",
-    "lr_vs_temperature.png",
-    "lr_vs_clearing_index.png",
-    "rox_equiv_vs_nox.png",
-    "rox_equiv_vs_temperature.png",
-    "rox_equiv_vs_uv.png",
-    "rox_equiv_vs_solar_radiation.png",
-    "rox_equiv_vs_j.png",
-    "rox_equiv_vs_clearing_index.png",
 )
 SOURCE_AUDIT_ARTIFACTS = (
     "manifest.json",
@@ -51,6 +33,14 @@ SOURCE_AUDIT_ARTIFACTS = (
 
 def expected_artifacts(summary: dict[str, Any]) -> tuple[str, ...]:
     """Resolve period-specific analysis artifacts, with legacy compatibility."""
+    expected = COMMON_EXPECTED_ARTIFACTS
+    condition_report = summary.get("condition_report")
+    if condition_report:
+        expected += (
+            str(condition_report["statistics"]),
+            "condition_report_metadata.json",
+            *(str(path) for path in condition_report["plots"]),
+        )
     diagnostics = summary.get("hourly_diagnostics")
     if diagnostics:
         config = summary["configuration"]
@@ -59,11 +49,11 @@ def expected_artifacts(summary: dict[str, Any]) -> tuple[str, ...]:
             if config.get("month") is not None
             else f"{int(config['year'])}_available_observations"
         )
-        return COMMON_EXPECTED_ARTIFACTS + (
+        return expected + (
             f"leighton_ratio_{period_slug}.parquet",
             str(diagnostics["path"]),
         )
-    return COMMON_EXPECTED_ARTIFACTS + ("leighton_ratio_may_2025.parquet",)
+    return expected + ("leighton_ratio_may_2025.parquet",)
 
 
 def sha256(path: Path) -> str:
