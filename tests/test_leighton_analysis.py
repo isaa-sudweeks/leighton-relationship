@@ -38,7 +38,7 @@ from leighton_relationship_analysis import (
 
 
 class LeightonAnalysisTests(unittest.TestCase):
-    def test_pinned_hawthorne_snapshot_has_no_pm25_indicator(self):
+    def test_pinned_hawthorne_snapshot_records_pm25_as_not_requested(self):
         result = summarize_aqs_source_provenance(DEFAULT_AQS_PATH)
 
         self.assertEqual(result["manifest_status"], "available")
@@ -48,7 +48,10 @@ class LeightonAnalysisTests(unittest.TestCase):
         )
         self.assertEqual(
             result["smoke_indicator"]["status"],
-            "not_available_in_source_snapshot",
+            "pm25_not_requested_not_assessed",
+        )
+        self.assertEqual(
+            result["smoke_indicator"]["requested_pm25_parameter_codes"], []
         )
         self.assertEqual(
             result["smoke_indicator"]["available_pm25_parameter_codes"], []
@@ -77,7 +80,7 @@ class LeightonAnalysisTests(unittest.TestCase):
         self.assertEqual(result["returned_parameter_codes"], ["42601", "63301"])
         self.assertEqual(
             result["smoke_indicator"]["status"],
-            "not_available_in_source_snapshot",
+            "pm25_requested_but_not_returned",
         )
         self.assertFalse(result["smoke_indicator"]["added_to_diagnostics"])
         self.assertEqual(
@@ -563,7 +566,7 @@ class LeightonAnalysisTests(unittest.TestCase):
             "leighton_relationship_analysis.plot_ho2_diagnostic"
         ) as mock_ho2_plot, patch(
             "leighton_relationship_analysis.plot_lr_relationship"
-        ), patch(
+        ) as mock_legacy_lr_plot, patch(
             "leighton_relationship_analysis.plot_ratio_distributions"
         ), patch(
             "leighton_relationship_analysis.plot_temperature_correction"
@@ -577,6 +580,8 @@ class LeightonAnalysisTests(unittest.TestCase):
                 output,
                 AnalysisConfig(year=2024, month=6),
             )
+
+            mock_legacy_lr_plot.assert_not_called()
 
             processed = output / "leighton_ratio_2024_06.parquet"
             diagnostics_path = output / "hourly_diagnostics_2024_06.parquet"

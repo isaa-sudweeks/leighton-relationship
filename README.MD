@@ -158,13 +158,15 @@ radical-equivalent concentrations are null unless excess production is
 positive, while the signed excess rate and signed inferred HO2 remain
 available for audit.
 
-The pinned Hawthorne AQS snapshot does not contain PM2.5. Its manifest records
+The pinned Hawthorne AQS snapshot did not request PM2.5. Its manifest records
 returned parameter codes `42601`, `42602`, `44201`, `62101`, and `63301`,
-covering NO, NO2, O3, temperature, and solar radiation. No returned variable
-is designated as another defensible smoke indicator, so the diagnostics table
-does not include one. `summary.json` records this limitation and the exact
-returned-code inventory; adding a smoke indicator requires a documented source
-expansion rather than interpreting an existing variable as a proxy.
+covering NO, NO2, O3, temperature, and solar radiation. This proves only that
+PM2.5 is absent from this snapshot, not that a Hawthorne PM2.5 monitor is
+unavailable. No returned variable is designated as another defensible smoke
+indicator, so the diagnostics table does not include one. `summary.json`
+records the exact requested/returned inventory and marks PM2.5 availability as
+not assessed; adding a smoke indicator requires a documented source expansion
+or a separate site-level availability check.
 
 Each hourly diagnostics row also has an `oxidative_regime` classification:
 `LR < 1`, `1 <= LR < 1.5`, `1.5 <= LR < 2`, or `LR >= 2`. Missing or

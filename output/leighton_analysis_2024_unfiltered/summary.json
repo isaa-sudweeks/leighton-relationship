@@ -194,11 +194,11 @@
     },
     "download_id": "20240101_20260728_20260729T004631Z",
     "requested_parameter_codes": [
-      "44201",
       "42601",
       "42602",
-      "63301",
+      "44201",
       "62101",
+      "63301",
       "63302"
     ],
     "returned_parameter_codes": [
@@ -212,14 +212,15 @@
       "63302"
     ],
     "smoke_indicator": {
-      "status": "not_available_in_source_snapshot",
+      "status": "pm25_not_requested_not_assessed",
       "added_to_diagnostics": false,
-      "pm25_parameter_codes_checked": [
+      "pm25_parameter_codes": [
         "88101",
         "88502"
       ],
+      "requested_pm25_parameter_codes": [],
       "available_pm25_parameter_codes": [],
-      "note": "No PM2.5 parameter is present and no returned variable has been designated as another defensible smoke indicator."
+      "note": "PM2.5 was not requested for this source snapshot, so its site-level availability has not been assessed. No returned variable is designated as another defensible smoke indicator."
     }
   },
   "hourly_diagnostics": {
