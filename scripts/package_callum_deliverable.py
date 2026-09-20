@@ -34,6 +34,9 @@ SOURCE_AUDIT_ARTIFACTS = (
 def expected_artifacts(summary: dict[str, Any]) -> tuple[str, ...]:
     """Resolve period-specific analysis artifacts, with legacy compatibility."""
     expected = COMMON_EXPECTED_ARTIFACTS
+    ho2_diagnostic = summary.get("ho2_diagnostic")
+    if ho2_diagnostic:
+        expected += (str(ho2_diagnostic["path"]),)
     condition_report = summary.get("condition_report")
     if condition_report:
         expected += (

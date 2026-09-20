@@ -125,8 +125,11 @@ the confirmed downstream excess-oxidation and radical-equivalent diagnostics.
   excess is positive, together with the evaluated coefficient/rate value used.
 - [x] Preserve the signed excess-production numerator so negative inferred
   results remain inspectable rather than being silently discarded.
-- [ ] Plot the inferred HO2 diagnostic and/or the corrected Leighton
-  relationship including the inferred HO2 contribution.
+- [x] Plot the positive-excess inferred HO2 diagnostic, with the signed
+  calculation retained in a separate audit panel so nonpositive results remain
+  visible.
+- [ ] Clarify the intended corrected Leighton-relationship definition with
+  Callum/Jaron before implementing or plotting that separate quantity.
 
 ## Final figures and review
 

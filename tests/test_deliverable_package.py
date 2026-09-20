@@ -11,12 +11,19 @@ class DeliverablePackageTests(unittest.TestCase):
                 "hourly_diagnostics": {
                     "path": "hourly_diagnostics_2024_06.parquet"
                 },
+                "ho2_diagnostic": {"path": "ho2_inferred_diagnostic.png"},
             }
         )
 
         self.assertIn("leighton_ratio_2024_06.parquet", artifacts)
         self.assertIn("hourly_diagnostics_2024_06.parquet", artifacts)
+        self.assertIn("ho2_inferred_diagnostic.png", artifacts)
         self.assertNotIn("leighton_ratio_may_2025.parquet", artifacts)
+
+    def test_legacy_outputs_do_not_require_unrecorded_ho2_figure(self):
+        artifacts = expected_artifacts({})
+
+        self.assertNotIn("ho2_inferred_diagnostic.png", artifacts)
 
     def test_expected_artifacts_support_available_year_outputs(self):
         artifacts = expected_artifacts(

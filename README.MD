@@ -91,7 +91,10 @@ python leighton_relationship_analysis.py
 It writes the processed dataset for the configured period, a compact hourly
 diagnostics table, a JSON summary, LR and log10(LR) time series, relationship
 plots, non-overlapping clock-window distributions, and the temperature
-correction plot under `output/leighton_analysis/`.
+correction plot under `output/leighton_analysis/`. It also writes
+`ho2_inferred_diagnostic.png`, whose upper panel reports inferred HO2 only for
+positive inferred excess production and whose lower panel retains the signed
+calculation for audit, including zero and negative values.
 
 The primary calculation uses Hawthorne local standard time from 10:00 through
 16:00 (inclusive) and requires strict NO > 0.20 ppb, following the August 14 and 18,
@@ -172,6 +175,10 @@ different:
 k_RO2+NO(T) = 2.7e-12 * exp(360 / T)
 k_HO2+NO(T) = 3.44e-12 * exp(260 / T)
 ```
+
+The inferred-HO2 figure is a diagnostic, not a corrected Leighton
+relationship. No corrected relationship is calculated because its precise
+definition still requires clarification from Callum and Jaron.
 
 Each successful run removes period-specific artifacts left by an earlier run
 in the same output directory before writing the new result. Unrelated files

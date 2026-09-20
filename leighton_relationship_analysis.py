@@ -814,6 +814,141 @@ def plot_log_ratio_timeseries(
     plt.close(fig)
 
 
+def plot_ho2_diagnostic(
+    data: pd.DataFrame,
+    config: AnalysisConfig,
+    destination: Path,
+) -> None:
+    """Plot positive-excess inferred HO2 and retain signed values for audit.
+
+    ``HO2_inferred_molecules_cm3`` is the reportable diagnostic and is null
+    unless inferred excess production is positive.  The second panel shows the
+    corresponding signed calculation so zero and negative results remain
+    visible rather than being silently omitted.
+    """
+
+    required = {
+        "HO2_inferred_molecules_cm3",
+        "HO2_inferred_signed_molecules_cm3",
+    }
+    missing = sorted(required.difference(data.columns))
+    if missing:
+        raise ValueError(
+            "HO2 diagnostic plot is missing required columns: "
+            + ", ".join(missing)
+        )
+
+    positive_values = pd.to_numeric(
+        data["HO2_inferred_molecules_cm3"], errors="coerce"
+    )
+    positive = data.loc[
+        positive_values.gt(0.0) & np.isfinite(positive_values)
+    ].copy()
+    signed_values = pd.to_numeric(
+        data["HO2_inferred_signed_molecules_cm3"], errors="coerce"
+    )
+    signed = data.loc[signed_values.notna() & np.isfinite(signed_values)].copy()
+
+    fig, axes = plt.subplots(2, 1, figsize=(11, 8.2), sharex=True)
+    fig.subplots_adjust(left=0.11, right=0.985, top=0.86, bottom=0.12, hspace=0.20)
+    fig.suptitle(
+        f"Inferred HO2 Diagnostic at Hawthorne — {period_label(config)}",
+        x=0.11,
+        y=0.965,
+        ha="left",
+        fontsize=16,
+        fontweight="bold",
+        color="#111827",
+    )
+    fig.text(
+        0.11,
+        0.91,
+        (
+            f"n={len(positive)} positive-excess values from {len(data)} retained "
+            "hourly observations · diagnostic only"
+        ),
+        fontsize=10,
+        color="#4B5563",
+    )
+
+    positive_axis, signed_axis = axes
+    if positive.empty:
+        positive_axis.text(
+            0.5,
+            0.5,
+            "No positive-excess inferred HO2 values",
+            transform=positive_axis.transAxes,
+            ha="center",
+            va="center",
+            fontsize=12,
+            color="#6B7280",
+        )
+    else:
+        positive_axis.scatter(
+            positive.index,
+            positive["HO2_inferred_molecules_cm3"],
+            s=25,
+            color="#059669",
+            edgecolors="#065F46",
+            linewidths=0.35,
+            alpha=0.72,
+        )
+    positive_axis.set_ylabel("Positive-excess inferred HO2\n(molecule cm$^{-3}$)")
+    positive_axis.set_title(
+        "Reported positive-excess diagnostic", loc="left", fontsize=12
+    )
+    positive_axis.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+    _style_axis(positive_axis)
+
+    if signed.empty:
+        signed_axis.text(
+            0.5,
+            0.5,
+            "No finite signed inferred HO2 values",
+            transform=signed_axis.transAxes,
+            ha="center",
+            va="center",
+            fontsize=12,
+            color="#6B7280",
+        )
+    else:
+        signed_axis.scatter(
+            signed.index,
+            signed["HO2_inferred_signed_molecules_cm3"],
+            s=21,
+            color="#2563EB",
+            edgecolors="#1E3A8A",
+            linewidths=0.3,
+            alpha=0.62,
+        )
+    signed_axis.axhline(0.0, color="#374151", linewidth=1.2, linestyle="--")
+    signed_axis.set_title(
+        "Signed calculation retained for audit", loc="left", fontsize=12
+    )
+    signed_axis.set_ylabel("Signed inferred HO2\n(molecule cm$^{-3}$)")
+    signed_axis.set_xlabel("Local Standard Time")
+    signed_axis.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+    locator = mdates.AutoDateLocator(minticks=5, maxticks=10)
+    signed_axis.xaxis.set_major_locator(locator)
+    signed_axis.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+    _style_axis(signed_axis)
+
+    fig.text(
+        0.985,
+        0.025,
+        (
+            "A corrected Leighton relationship is not shown; its definition "
+            "requires Callum/Jaron clarification."
+        ),
+        ha="right",
+        va="bottom",
+        fontsize=8,
+        color="#6B7280",
+    )
+    fig.savefig(destination, dpi=180, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+
+
 def plot_lr_relationship(
     data: pd.DataFrame,
     x_column: str,
@@ -1221,6 +1356,7 @@ def run_analysis(
     distributions_path = output_dir / "leighton_ratio_distributions.png"
     correction_path = output_dir / "temperature_correction.png"
     alignment_path = output_dir / "uv_alignment_diagnostic.png"
+    ho2_diagnostic_path = output_dir / "ho2_inferred_diagnostic.png"
     no_sensitivity_path = output_dir / "no_threshold_sensitivity.csv"
     regime_summary_path = (
         output_dir / f"oxidative_regime_summary_{period_slug}.csv"
@@ -1324,9 +1460,32 @@ def run_analysis(
     summary["no_threshold_sensitivity"] = sensitivity.replace(
         {np.nan: None}
     ).to_dict(orient="records")
+    positive_ho2 = pd.to_numeric(
+        data["HO2_inferred_molecules_cm3"], errors="coerce"
+    )
+    signed_ho2 = pd.to_numeric(
+        data["HO2_inferred_signed_molecules_cm3"], errors="coerce"
+    )
+    summary["ho2_diagnostic"] = {
+        "path": ho2_diagnostic_path.name,
+        "positive_excess_rows": int(
+            (positive_ho2.gt(0.0) & np.isfinite(positive_ho2)).sum()
+        ),
+        "signed_audit_rows": int(np.isfinite(signed_ho2).sum()),
+        "reported_series": (
+            "HO2_inferred_molecules_cm3; populated only where "
+            "P_excess_molecules_cm3_s > 0"
+        ),
+        "audit_series": "HO2_inferred_signed_molecules_cm3",
+        "limitation": (
+            "No corrected Leighton relationship is calculated; its definition "
+            "requires Callum/Jaron clarification."
+        ),
+    }
     summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     plot_ratio_timeseries(data, config, timeseries_path)
     plot_log_ratio_timeseries(data, config, log_timeseries_path)
+    plot_ho2_diagnostic(data, config, ho2_diagnostic_path)
     plot_ratio_distributions(daytime, outside, config, distributions_path)
     plot_temperature_correction(data, correction_path)
     plot_uv_alignment_diagnostic(
