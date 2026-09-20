@@ -86,8 +86,13 @@ the confirmed downstream excess-oxidation and radical-equivalent diagnostics.
 - [x] Add Boolean columns `LR_gt_1p5` and `LR_gt_2`.
 - [x] Add a Boolean flag identifying observations robustly above LR = 1 after
   accounting for the estimated uncertainty, using Callum's email equation.
-- [ ] If readily available, add PM2.5 or another defensible smoke indicator to
-  the diagnostics table; otherwise document that no indicator was added.
+- [x] Check the pinned Hawthorne snapshot for PM2.5 or another defensible smoke
+  indicator. The snapshot returned only AQS parameter codes `42601`, `42602`,
+  `44201`, `62101`, and `63301` (NO, NO2, O3, temperature, and solar
+  radiation). It contains no PM2.5 parameter, and no returned variable was
+  designated as another defensible smoke indicator, so none was added to the
+  diagnostics table. This closes the check for the current immutable snapshot;
+  adding an indicator requires a separately documented source expansion.
 
 ## Diagnostic plots and statistics
 

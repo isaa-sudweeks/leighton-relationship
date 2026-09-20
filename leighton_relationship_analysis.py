@@ -41,6 +41,7 @@ DEFAULT_AQS_PATH = Path(
 )
 DEFAULT_UV_PATH = Path("data/UV Data/UV Data All Time HW LP RB.csv")
 DEFAULT_OUTPUT_DIR = Path("output/leighton_analysis")
+PM25_AQS_PARAMETER_CODES = ("88101", "88502")
 
 # JPL Evaluation 20 expressions confirmed by Callum Flowerday's September 16,
 # 2026 email (cm3 molecule-1 s-1, with temperature in kelvin).
@@ -112,6 +113,68 @@ DIAGNOSTIC_COLUMNS = [
     "LR_gt_2",
     "LR_robustly_gt_1",
 ]
+
+
+def summarize_aqs_source_provenance(aqs_path: Path) -> dict[str, object]:
+    """Summarize source coverage without inferring unavailable measurements."""
+
+    manifest_path = aqs_path.parent / "manifest.json"
+    provenance: dict[str, object] = {
+        "analysis_source_path": str(aqs_path),
+        "manifest_path": str(manifest_path),
+        "manifest_status": "unavailable",
+        "monitor_specific_aqs_qa": {
+            "status": "not_retrieved_unverified",
+            "note": (
+                "Monitor-specific AQS QA and uncertainty records were not "
+                "retrieved for this analysis."
+            ),
+        },
+    }
+    if not manifest_path.is_file():
+        provenance["smoke_indicator"] = {
+            "status": "not_assessed_source_manifest_unavailable",
+            "added_to_diagnostics": False,
+        }
+        return provenance
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    returned_codes = sorted(
+        str(code) for code in manifest.get("returned_parameter_codes", [])
+    )
+    available_pm25_codes = sorted(
+        set(returned_codes).intersection(PM25_AQS_PARAMETER_CODES)
+    )
+    provenance.update(
+        {
+            "manifest_status": "available",
+            "download_id": manifest.get("download_id"),
+            "requested_parameter_codes": [
+                str(code) for code in manifest.get("parameter_codes", [])
+            ],
+            "returned_parameter_codes": returned_codes,
+            "missing_parameter_codes": [
+                str(code) for code in manifest.get("missing_parameter_codes", [])
+            ],
+            "smoke_indicator": {
+                "status": (
+                    "pm25_available"
+                    if available_pm25_codes
+                    else "not_available_in_source_snapshot"
+                ),
+                "added_to_diagnostics": False,
+                "pm25_parameter_codes_checked": list(PM25_AQS_PARAMETER_CODES),
+                "available_pm25_parameter_codes": available_pm25_codes,
+                "note": (
+                    "No PM2.5 parameter is present and no returned variable "
+                    "has been designated as another defensible smoke indicator."
+                    if not available_pm25_codes
+                    else "PM2.5 is present in the source but is not incorporated."
+                ),
+            },
+        }
+    )
+    return provenance
 
 
 @dataclass(frozen=True)
@@ -1149,6 +1212,7 @@ def summarize(
         },
         "uncertainty": {
             "status": "provisional_total_relative_uncertainty",
+            "scope": "partial; not a complete monitor-specific uncertainty budget",
             "source": "Callum Flowerday email dated 2026-08-31",
             "quantified_relative_components": (
                 PROVISIONAL_LR_RELATIVE_UNCERTAINTIES
@@ -1162,6 +1226,7 @@ def summarize(
             "combination_method": "root_sum_of_squares_assuming_independence",
             "plot_interval_label": "provisional 14.9% total LR uncertainty",
             "row_level_method": "absolute uncertainty = abs(LR) * 0.149",
+            "monitor_specific_aqs_qa_status": "not_retrieved_unverified",
         },
     }
 
@@ -1216,6 +1281,7 @@ def run_analysis(
     diagnostics.to_parquet(diagnostics_path, index=False)
     sensitivity.to_csv(no_sensitivity_path, index=False)
     summary = summarize(data, daytime, outside, accounting, config)
+    summary["source_provenance"] = summarize_aqs_source_provenance(aqs_path)
     summary["hourly_diagnostics"] = {
         "path": diagnostics_path.name,
         "rows": len(diagnostics),
