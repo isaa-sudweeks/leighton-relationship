@@ -16,7 +16,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-
 COMMON_EXPECTED_ARTIFACTS = (
     "summary.json",
     "no_threshold_sensitivity.csv",
@@ -38,6 +37,13 @@ def expected_artifacts(summary: dict[str, Any]) -> tuple[str, ...]:
     ho2_diagnostic = summary.get("ho2_diagnostic")
     if ho2_diagnostic:
         expected += (str(ho2_diagnostic["path"]),)
+    condition_report = summary.get("condition_report")
+    if condition_report:
+        expected += (
+            str(condition_report["statistics"]),
+            "condition_report_metadata.json",
+            *(str(path) for path in condition_report["plots"]),
+        )
     diagnostics = summary.get("hourly_diagnostics")
     if diagnostics:
         config = summary["configuration"]
@@ -46,10 +52,14 @@ def expected_artifacts(summary: dict[str, Any]) -> tuple[str, ...]:
             if config.get("month") is not None
             else f"{int(config['year'])}_available_observations"
         )
-        return expected + (
+        artifacts = expected + (
             f"leighton_ratio_{period_slug}.parquet",
             str(diagnostics["path"]),
         )
+        oxidative_regimes = summary.get("oxidative_regimes")
+        if oxidative_regimes:
+            artifacts += (str(oxidative_regimes["path"]),)
+        return artifacts
     return expected + ("leighton_ratio_may_2025.parquet",)
 
 

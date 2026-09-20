@@ -158,6 +158,16 @@ radical-equivalent concentrations are null unless excess production is
 positive, while the signed excess rate and signed inferred HO2 remain
 available for audit.
 
+Each hourly diagnostics row also has an `oxidative_regime` classification:
+`LR < 1`, `1 <= LR < 1.5`, `1.5 <= LR < 2`, or `LR >= 2`. Missing or
+non-finite LR values remain unclassified. The period-specific
+`oxidative_regime_summary_<period>.csv` provides one row per regime-variable
+pair for NO, NO2, O3, NOx, J, UV, solar radiation, SZA, temperature, and
+clearing index. It records units, total regime rows, valid and missing counts,
+mean, sample standard deviation, minimum, quartiles, median, and maximum.
+Empty regimes and entirely missing variables are retained explicitly. These
+outputs are descriptive and do not assign atmospheric meaning to a regime.
+
 The generalized organic RO2 and Jaron HO2 rate expressions are intentionally
 different:
 
@@ -173,6 +183,26 @@ definition still requires clarification from Callum and Jaron.
 Each successful run removes period-specific artifacts left by an earlier run
 in the same output directory before writing the new result. Unrelated files
 are preserved.
+
+Each run also writes `condition_correlations.csv`,
+`condition_report_metadata.json`, and 16 pairwise scatterplots. The report
+compares LR with NO, NO2, O3, NOx, J, UV, solar radiation, SZA, temperature,
+and clearing index, and compares equivalent RO2 with NOx, temperature, UV,
+solar radiation, J, and clearing index. Every table row reports the total input
+rows, pairwise-valid sample count, excluded missing/non-finite count, Pearson
+`r` and two-sided p-value, Spearman `rho` and two-sided p-value, and a status.
+Correlations are left missing and the status explains why when fewer than
+three valid pairs remain or either input is constant. The plots and table are
+descriptive outputs only and do not assign atmospheric causes.
+
+The same report can be regenerated independently from a diagnostics artifact:
+
+```bash
+python condition_statistics.py \
+  output/leighton_analysis_2025_unfiltered/hourly_diagnostics_2025_available_observations.parquet \
+  --output-dir output/leighton_analysis_2025_unfiltered \
+  --context "2025 available observations"
+```
 
 Apply the collocated AQS solar-radiation and Northern Wasatch Front
 clearing-index filters with:
