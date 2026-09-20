@@ -34,6 +34,10 @@ SOURCE_AUDIT_ARTIFACTS = (
 
 def expected_artifacts(summary: dict[str, Any]) -> tuple[str, ...]:
     """Resolve period-specific analysis artifacts, with legacy compatibility."""
+    expected = COMMON_EXPECTED_ARTIFACTS
+    ho2_diagnostic = summary.get("ho2_diagnostic")
+    if ho2_diagnostic:
+        expected += (str(ho2_diagnostic["path"]),)
     diagnostics = summary.get("hourly_diagnostics")
     if diagnostics:
         config = summary["configuration"]
@@ -42,11 +46,11 @@ def expected_artifacts(summary: dict[str, Any]) -> tuple[str, ...]:
             if config.get("month") is not None
             else f"{int(config['year'])}_available_observations"
         )
-        return COMMON_EXPECTED_ARTIFACTS + (
+        return expected + (
             f"leighton_ratio_{period_slug}.parquet",
             str(diagnostics["path"]),
         )
-    return COMMON_EXPECTED_ARTIFACTS + ("leighton_ratio_may_2025.parquet",)
+    return expected + ("leighton_ratio_may_2025.parquet",)
 
 
 def sha256(path: Path) -> str:
