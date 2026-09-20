@@ -47,6 +47,27 @@ class DeliverablePackageTests(unittest.TestCase):
         self.assertNotIn("condition_correlations.csv", artifacts)
         self.assertNotIn("condition_report_metadata.json", artifacts)
 
+    def test_expected_artifacts_include_oxidative_regime_summary(self):
+        artifacts = expected_artifacts(
+            {
+                "configuration": {"year": 2025, "month": None},
+                "hourly_diagnostics": {
+                    "path": "hourly_diagnostics_2025_available_observations.parquet"
+                },
+                "oxidative_regimes": {
+                    "path": (
+                        "oxidative_regime_summary_"
+                        "2025_available_observations.csv"
+                    )
+                },
+            }
+        )
+
+        self.assertIn(
+            "oxidative_regime_summary_2025_available_observations.csv",
+            artifacts,
+        )
+
     def test_accepts_only_sr_ci_switch_difference(self):
         primary = {"configuration": {"year": 2025, "apply_sr_ci": False}}
         sensitivity = {"configuration": {"year": 2025, "apply_sr_ci": True}}

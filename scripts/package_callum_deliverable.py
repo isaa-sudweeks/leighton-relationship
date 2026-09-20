@@ -49,10 +49,14 @@ def expected_artifacts(summary: dict[str, Any]) -> tuple[str, ...]:
             if config.get("month") is not None
             else f"{int(config['year'])}_available_observations"
         )
-        return expected + (
+        artifacts = expected + (
             f"leighton_ratio_{period_slug}.parquet",
             str(diagnostics["path"]),
         )
+        oxidative_regimes = summary.get("oxidative_regimes")
+        if oxidative_regimes:
+            artifacts += (str(oxidative_regimes["path"]),)
+        return artifacts
     return expected + ("leighton_ratio_may_2025.parquet",)
 
 

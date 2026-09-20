@@ -71,6 +71,8 @@ class LeightonAnalysisTests(unittest.TestCase):
             stale = [
                 output / "leighton_ratio_2025_available_observations.parquet",
                 output / "hourly_diagnostics_2025_available_observations.parquet",
+                output
+                / "oxidative_regime_summary_2025_available_observations.csv",
                 output / "monthly_summary.csv",
                 monthly / "2025-05_leighton_ratio_timeseries.png",
                 monthly / "2024-05_log10_leighton_ratio_timeseries.png",
@@ -386,6 +388,7 @@ class LeightonAnalysisTests(unittest.TestCase):
                 "Temp",
                 "clearing_index",
                 "LR",
+                "oxidative_regime",
                 "log10_LR",
                 "k_no_o3_cm3_molecule_s",
                 "P_o3_molecules_cm3_s",
@@ -404,6 +407,7 @@ class LeightonAnalysisTests(unittest.TestCase):
         )
         self.assertEqual(result.loc[0, "NOx"], 6.0)
         self.assertEqual(result.loc[0, "clearing_index"], 850)
+        self.assertEqual(result.loc[0, "oxidative_regime"], "1.5 <= LR < 2")
 
     def test_hourly_diagnostics_marks_unavailable_clearing_index_as_missing(self):
         data = pd.DataFrame(
@@ -512,8 +516,12 @@ class LeightonAnalysisTests(unittest.TestCase):
 
             processed = output / "leighton_ratio_2024_06.parquet"
             diagnostics_path = output / "hourly_diagnostics_2024_06.parquet"
+            regime_summary_path = (
+                output / "oxidative_regime_summary_2024_06.csv"
+            )
             self.assertTrue(processed.is_file())
             self.assertTrue(diagnostics_path.is_file())
+            self.assertTrue(regime_summary_path.is_file())
             self.assertFalse((output / "leighton_ratio_may_2025.parquet").exists())
             diagnostics = pd.read_parquet(diagnostics_path)
             self.assertEqual(len(diagnostics), 1)
@@ -522,6 +530,14 @@ class LeightonAnalysisTests(unittest.TestCase):
             self.assertEqual(
                 summary["hourly_diagnostics"]["path"],
                 diagnostics_path.name,
+            )
+            self.assertEqual(
+                summary["oxidative_regimes"]["path"],
+                regime_summary_path.name,
+            )
+            self.assertEqual(
+                summary["oxidative_regimes"]["counts"]["1.5 <= LR < 2"],
+                1,
             )
 
     def test_time_windows_are_non_overlapping_and_exhaustive(self):

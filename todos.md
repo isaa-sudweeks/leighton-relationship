@@ -107,10 +107,14 @@ the confirmed downstream excess-oxidation and radical-equivalent diagnostics.
 
 ## Oxidative-regime analysis
 
-- [ ] Classify each retained observation into one of four LR regimes:
+- [x] Classify each retained observation into one of four LR regimes:
   `LR < 1`, `1 <= LR < 1.5`, `1.5 <= LR < 2`, or `LR >= 2`.
-- [ ] Summarize the distributions of NO, NO2, O3, NOx, J, UV, solar radiation,
+- [x] Summarize the distributions of NO, NO2, O3, NOx, J, UV, solar radiation,
   SZA, temperature, and clearing index within each LR regime.
+  The diagnostics table now includes `oxidative_regime`, and the tidy
+  `oxidative_regime_summary_<period>.csv` records explicit units, regime row
+  counts, valid/missing counts, and descriptive statistics without scientific
+  interpretation.
 
 ## Jaron's HO2 diagnostic
 
