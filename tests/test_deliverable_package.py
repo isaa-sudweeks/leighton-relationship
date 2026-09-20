@@ -25,6 +25,10 @@ class DeliverablePackageTests(unittest.TestCase):
                 "hourly_diagnostics": {
                     "path": "hourly_diagnostics_2025_available_observations.parquet"
                 },
+                "condition_report": {
+                    "statistics": "condition_correlations.csv",
+                    "plots": ["lr_vs_no.png", "rox_equiv_vs_clearing_index.png"],
+                },
             }
         )
 
@@ -34,6 +38,14 @@ class DeliverablePackageTests(unittest.TestCase):
         self.assertIn(
             "hourly_diagnostics_2025_available_observations.parquet", artifacts
         )
+        self.assertIn("condition_correlations.csv", artifacts)
+        self.assertIn("rox_equiv_vs_clearing_index.png", artifacts)
+
+    def test_legacy_outputs_do_not_require_unrecorded_condition_report(self):
+        artifacts = expected_artifacts({})
+
+        self.assertNotIn("condition_correlations.csv", artifacts)
+        self.assertNotIn("condition_report_metadata.json", artifacts)
 
     def test_expected_artifacts_include_oxidative_regime_summary(self):
         artifacts = expected_artifacts(

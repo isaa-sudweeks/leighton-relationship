@@ -177,6 +177,26 @@ Each successful run removes period-specific artifacts left by an earlier run
 in the same output directory before writing the new result. Unrelated files
 are preserved.
 
+Each run also writes `condition_correlations.csv`,
+`condition_report_metadata.json`, and 16 pairwise scatterplots. The report
+compares LR with NO, NO2, O3, NOx, J, UV, solar radiation, SZA, temperature,
+and clearing index, and compares equivalent RO2 with NOx, temperature, UV,
+solar radiation, J, and clearing index. Every table row reports the total input
+rows, pairwise-valid sample count, excluded missing/non-finite count, Pearson
+`r` and two-sided p-value, Spearman `rho` and two-sided p-value, and a status.
+Correlations are left missing and the status explains why when fewer than
+three valid pairs remain or either input is constant. The plots and table are
+descriptive outputs only and do not assign atmospheric causes.
+
+The same report can be regenerated independently from a diagnostics artifact:
+
+```bash
+python condition_statistics.py \
+  output/leighton_analysis_2025_unfiltered/hourly_diagnostics_2025_available_observations.parquet \
+  --output-dir output/leighton_analysis_2025_unfiltered \
+  --context "2025 available observations"
+```
+
 Apply the collocated AQS solar-radiation and Northern Wasatch Front
 clearing-index filters with:
 
