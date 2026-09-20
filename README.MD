@@ -158,6 +158,14 @@ radical-equivalent concentrations are null unless excess production is
 positive, while the signed excess rate and signed inferred HO2 remain
 available for audit.
 
+The pinned Hawthorne AQS snapshot does not contain PM2.5. Its manifest records
+returned parameter codes `42601`, `42602`, `44201`, `62101`, and `63301`,
+covering NO, NO2, O3, temperature, and solar radiation. No returned variable
+is designated as another defensible smoke indicator, so the diagnostics table
+does not include one. `summary.json` records this limitation and the exact
+returned-code inventory; adding a smoke indicator requires a documented source
+expansion rather than interpreting an existing variable as a proxy.
+
 Each hourly diagnostics row also has an `oxidative_regime` classification:
 `LR < 1`, `1 <= LR < 1.5`, `1.5 <= LR < 2`, or `LR >= 2`. Missing or
 non-finite LR values remain unclassified. The period-specific
@@ -225,4 +233,7 @@ NO measurement 2%, NO2 measurement 2%, NO + O3 kinetics 8%, and O3 measurement
 is used in plots and row-level outputs. Absolute uncertainty is calculated for
 each observation as `abs(LR) * 0.149`, so every row retains its own LR-scaled
 error bar. The component budget and unrounded RSS remain in `summary.json` for
-auditability.
+auditability. This 14.9% value is a partial, provisional budget, not a complete
+monitor-specific uncertainty characterization. Monitor-specific AQS QA and
+uncertainty records have not been retrieved or verified for this analysis;
+`summary.json` preserves that status explicitly.

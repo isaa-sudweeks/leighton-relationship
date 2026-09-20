@@ -1,13 +1,15 @@
-import unittest
+import json
 import math
 from pathlib import Path
 import tempfile
+import unittest
 from unittest.mock import patch
 
 import pandas as pd
 
 from leighton_relationship_analysis import (
     AnalysisConfig,
+    DEFAULT_AQS_PATH,
     DEFAULT_TUV_QC_SZA_MAX_DEG,
     DEFAULT_TUV_QC_SZA_MIN_DEG,
     GENERIC_RO2_NO_ACTIVATION_OVER_R_K,
@@ -30,11 +32,70 @@ from leighton_relationship_analysis import (
     period_label,
     run_analysis,
     split_time_windows,
+    summarize_aqs_source_provenance,
     summarize_no_threshold_sensitivity,
 )
 
 
 class LeightonAnalysisTests(unittest.TestCase):
+    def test_pinned_hawthorne_snapshot_has_no_pm25_indicator(self):
+        result = summarize_aqs_source_provenance(DEFAULT_AQS_PATH)
+
+        self.assertEqual(result["manifest_status"], "available")
+        self.assertEqual(
+            result["returned_parameter_codes"],
+            ["42601", "42602", "44201", "62101", "63301"],
+        )
+        self.assertEqual(
+            result["smoke_indicator"]["status"],
+            "not_available_in_source_snapshot",
+        )
+        self.assertEqual(
+            result["smoke_indicator"]["available_pm25_parameter_codes"], []
+        )
+
+    def test_source_provenance_records_absent_pm25_without_proxy_inference(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source_dir = Path(temporary)
+            aqs_path = source_dir / "aqs_analysis_ready.parquet"
+            (source_dir / "manifest.json").write_text(
+                json.dumps(
+                    {
+                        "download_id": "pinned-snapshot",
+                        "parameter_codes": ["42601", "88101", "63302"],
+                        "returned_parameter_codes": ["42601", "63301"],
+                        "missing_parameter_codes": ["88101", "63302"],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = summarize_aqs_source_provenance(aqs_path)
+
+        self.assertEqual(result["manifest_status"], "available")
+        self.assertEqual(result["download_id"], "pinned-snapshot")
+        self.assertEqual(result["returned_parameter_codes"], ["42601", "63301"])
+        self.assertEqual(
+            result["smoke_indicator"]["status"],
+            "not_available_in_source_snapshot",
+        )
+        self.assertFalse(result["smoke_indicator"]["added_to_diagnostics"])
+        self.assertEqual(
+            result["monitor_specific_aqs_qa"]["status"],
+            "not_retrieved_unverified",
+        )
+
+    def test_source_provenance_does_not_claim_snapshot_coverage_without_manifest(self):
+        result = summarize_aqs_source_provenance(
+            Path("missing-source") / "aqs_analysis_ready.parquet"
+        )
+
+        self.assertEqual(result["manifest_status"], "unavailable")
+        self.assertEqual(
+            result["smoke_indicator"]["status"],
+            "not_assessed_source_manifest_unavailable",
+        )
+
     def test_default_sza_bounds_match_documented_tuv_support_points(self):
         self.assertEqual(DEFAULT_TUV_QC_SZA_MIN_DEG, 21.0)
         self.assertEqual(DEFAULT_TUV_QC_SZA_MAX_DEG, 49.8)
@@ -534,6 +595,14 @@ class LeightonAnalysisTests(unittest.TestCase):
                 summary["hourly_diagnostics"]["path"],
                 diagnostics_path.name,
             )
+            self.assertEqual(
+                summary["source_provenance"]["manifest_status"], "unavailable"
+            )
+            self.assertEqual(
+                summary["uncertainty"]["monitor_specific_aqs_qa_status"],
+                "not_retrieved_unverified",
+            )
+            self.assertIn("partial", summary["uncertainty"]["scope"])
             self.assertEqual(
                 summary["ho2_diagnostic"]["path"],
                 "ho2_inferred_diagnostic.png",
