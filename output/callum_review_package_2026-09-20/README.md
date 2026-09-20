@@ -37,7 +37,8 @@ index is joined only for the SR/CI sensitivity analyses.
 - The 14.9% LR uncertainty remains a partial provisional budget, not a complete
   monitor-specific uncertainty estimate.
 - Monitor-specific AQS QA values have not been retrieved and verified.
-- The pinned Hawthorne source snapshot has no PM2.5 or other designated smoke
-  indicator; adding one requires a separately documented source expansion.
+- The pinned Hawthorne source snapshot did not request PM2.5 and has no other
+  designated smoke indicator. PM2.5 availability therefore remains unassessed;
+  adding it requires a documented source expansion or site-level check.
 - A corrected Leighton relationship including inferred HO2 is not reported
   because its definition still requires Callum/Jaron clarification.

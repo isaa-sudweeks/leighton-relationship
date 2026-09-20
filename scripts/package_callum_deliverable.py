@@ -71,6 +71,17 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def repository_relative_path(path: Path) -> str:
+    """Return a portable artifact path relative to the repository root."""
+    repository_root = Path(__file__).resolve().parents[1]
+    try:
+        return path.resolve().relative_to(repository_root).as_posix()
+    except ValueError as error:
+        raise ValueError(
+            f"Review-package artifact is outside the repository: {path}"
+        ) from error
+
+
 def load_summary(directory: Path) -> dict[str, Any]:
     path = directory / "summary.json"
     if not path.is_file():
@@ -133,7 +144,7 @@ def build_manifest(
                 {
                     "analysis": label,
                     "name": name,
-                    "path": str(path.resolve()),
+                    "path": repository_relative_path(path),
                     "bytes": path.stat().st_size,
                     "sha256": sha256(path),
                 }
@@ -148,7 +159,7 @@ def build_manifest(
                 {
                     "analysis": "aqs_source_audit",
                     "name": name,
-                    "path": str(path.resolve()),
+                    "path": repository_relative_path(path),
                     "bytes": path.stat().st_size,
                     "sha256": sha256(path),
                 }
@@ -157,9 +168,10 @@ def build_manifest(
         raise ValueError("Missing expected artifacts: " + ", ".join(missing))
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "purpose": "Callum review package; no chemistry interpretation included",
+        "artifact_path_base": "repository_root",
         "matched_configuration": True,
         "primary_configuration": primary_summary["configuration"],
         "sr_ci_configuration": sensitivity_summary["configuration"],

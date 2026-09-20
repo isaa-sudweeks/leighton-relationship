@@ -147,38 +147,50 @@ def summarize_aqs_source_provenance(aqs_path: Path) -> dict[str, object]:
         return provenance
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    requested_codes = sorted(
+        str(code) for code in manifest.get("parameter_codes", [])
+    )
     returned_codes = sorted(
         str(code) for code in manifest.get("returned_parameter_codes", [])
+    )
+    requested_pm25_codes = sorted(
+        set(requested_codes).intersection(PM25_AQS_PARAMETER_CODES)
     )
     available_pm25_codes = sorted(
         set(returned_codes).intersection(PM25_AQS_PARAMETER_CODES)
     )
+    if available_pm25_codes:
+        smoke_status = "pm25_available"
+        smoke_note = "PM2.5 is present in the source but is not incorporated."
+    elif requested_pm25_codes:
+        smoke_status = "pm25_requested_but_not_returned"
+        smoke_note = (
+            "PM2.5 was requested but is absent from the returned source "
+            "snapshot; site-level availability was not otherwise assessed."
+        )
+    else:
+        smoke_status = "pm25_not_requested_not_assessed"
+        smoke_note = (
+            "PM2.5 was not requested for this source snapshot, so its "
+            "site-level availability has not been assessed. No returned "
+            "variable is designated as another defensible smoke indicator."
+        )
     provenance.update(
         {
             "manifest_status": "available",
             "download_id": manifest.get("download_id"),
-            "requested_parameter_codes": [
-                str(code) for code in manifest.get("parameter_codes", [])
-            ],
+            "requested_parameter_codes": requested_codes,
             "returned_parameter_codes": returned_codes,
             "missing_parameter_codes": [
                 str(code) for code in manifest.get("missing_parameter_codes", [])
             ],
             "smoke_indicator": {
-                "status": (
-                    "pm25_available"
-                    if available_pm25_codes
-                    else "not_available_in_source_snapshot"
-                ),
+                "status": smoke_status,
                 "added_to_diagnostics": False,
-                "pm25_parameter_codes_checked": list(PM25_AQS_PARAMETER_CODES),
+                "pm25_parameter_codes": list(PM25_AQS_PARAMETER_CODES),
+                "requested_pm25_parameter_codes": requested_pm25_codes,
                 "available_pm25_parameter_codes": available_pm25_codes,
-                "note": (
-                    "No PM2.5 parameter is present and no returned variable "
-                    "has been designated as another defensible smoke indicator."
-                    if not available_pm25_codes
-                    else "PM2.5 is present in the source but is not incorporated."
-                ),
+                "note": smoke_note,
             },
         }
     )
@@ -1560,15 +1572,6 @@ def run_analysis(
         config,
         alignment_path,
     )
-    relationships = {
-        "NO": ("NO (ppb)", "lr_vs_no.png"),
-        "solar_zenith_angle_deg": ("Solar zenith angle (degrees)", "lr_vs_sza.png"),
-        "NO2": ("NO2 (ppb)", "lr_vs_no2.png"),
-        "O3": ("O3 (ppm)", "lr_vs_o3.png"),
-    }
-    for column, (label, filename) in relationships.items():
-        plot_lr_relationship(data, column, label, output_dir / filename, config)
-
     if config.month is None:
         monthly_dir = output_dir / "monthly"
         monthly_dir.mkdir(exist_ok=True)

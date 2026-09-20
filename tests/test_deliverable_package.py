@@ -1,9 +1,21 @@
+from pathlib import Path
 import unittest
 
-from scripts.package_callum_deliverable import expected_artifacts, matched_configuration
+from scripts.package_callum_deliverable import (
+    expected_artifacts,
+    matched_configuration,
+    repository_relative_path,
+)
 
 
 class DeliverablePackageTests(unittest.TestCase):
+    def test_manifest_paths_are_repository_relative(self):
+        repository_root = Path(__file__).resolve().parents[1]
+
+        result = repository_relative_path(repository_root / "output" / "summary.json")
+
+        self.assertEqual(result, "output/summary.json")
+
     def test_expected_artifacts_use_configured_period_and_diagnostics_path(self):
         artifacts = expected_artifacts(
             {
