@@ -84,6 +84,27 @@ class DeliverablePackageTests(unittest.TestCase):
         self.assertTrue(matched)
         self.assertEqual(differences, {})
 
+    def test_accepts_expected_ci_archive_path_difference(self):
+        primary = {
+            "configuration": {
+                "year": 2025,
+                "apply_sr_ci": False,
+                "ci_history_path": None,
+            }
+        }
+        sensitivity = {
+            "configuration": {
+                "year": 2025,
+                "apply_sr_ci": True,
+                "ci_history_path": "output/clearing_index_history.parquet",
+            }
+        }
+
+        matched, differences = matched_configuration(primary, sensitivity)
+
+        self.assertTrue(matched)
+        self.assertEqual(differences, {})
+
     def test_rejects_mismatched_scientific_configuration(self):
         primary = {
             "configuration": {

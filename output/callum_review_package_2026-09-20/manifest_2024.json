@@ -1,0 +1,486 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-09-20T15:20:43.898506+00:00",
+  "purpose": "Callum review package; no chemistry interpretation included",
+  "matched_configuration": true,
+  "primary_configuration": {
+    "year": 2024,
+    "month": null,
+    "period": "year_available_observations",
+    "minimum_uv": 10.0,
+    "daytime_start": "10:00",
+    "daytime_end": "16:00",
+    "time_window_inclusive": "both",
+    "time_standard": "local_standard_time",
+    "minimum_no_ppb": 0.2,
+    "minimum_no_operator": ">",
+    "site_latitude_deg": 40.736389,
+    "site_longitude_deg": -111.872222,
+    "poc_selections": {
+      "NO": 2,
+      "NO2": 3,
+      "O3": 1,
+      "SR": 1,
+      "Temp": 1
+    },
+    "apply_sr_ci": false,
+    "sr_threshold_w_m2": 710.0,
+    "clearing_index_threshold": 1000,
+    "target_airshed": "Northern Wasatch Front",
+    "uv_hour_shift": null,
+    "uv_alignment_max_shift": 3,
+    "tuv_qc_sza_min_deg": 21.0,
+    "tuv_qc_sza_max_deg": 49.8,
+    "ci_history_path": null
+  },
+  "sr_ci_configuration": {
+    "year": 2024,
+    "month": null,
+    "period": "year_available_observations",
+    "minimum_uv": 10.0,
+    "daytime_start": "10:00",
+    "daytime_end": "16:00",
+    "time_window_inclusive": "both",
+    "time_standard": "local_standard_time",
+    "minimum_no_ppb": 0.2,
+    "minimum_no_operator": ">",
+    "site_latitude_deg": 40.736389,
+    "site_longitude_deg": -111.872222,
+    "poc_selections": {
+      "NO": 2,
+      "NO2": 3,
+      "O3": 1,
+      "SR": 1,
+      "Temp": 1
+    },
+    "apply_sr_ci": true,
+    "sr_threshold_w_m2": 710.0,
+    "clearing_index_threshold": 1000,
+    "target_airshed": "Northern Wasatch Front",
+    "uv_hour_shift": null,
+    "uv_alignment_max_shift": 3,
+    "tuv_qc_sza_min_deg": 21.0,
+    "tuv_qc_sza_max_deg": 49.8,
+    "ci_history_path": "output/leighton_audit_followup_2026-07-28/full_available_ci_history_air_shed_5.parquet"
+  },
+  "artifacts": [
+    {
+      "analysis": "primary",
+      "name": "summary.json",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/summary.json",
+      "bytes": 13582,
+      "sha256": "448001108c45e2859f7b3db87f2dfb41fd58eff93580c890d06bd1ab5b667630"
+    },
+    {
+      "analysis": "primary",
+      "name": "no_threshold_sensitivity.csv",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/no_threshold_sensitivity.csv",
+      "bytes": 451,
+      "sha256": "8929924a58f4267c774d076f07d09991dacde7cb3ce39fb82f31d51dacc52836"
+    },
+    {
+      "analysis": "primary",
+      "name": "leighton_ratio_timeseries.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/leighton_ratio_timeseries.png",
+      "bytes": 301488,
+      "sha256": "17c8884bb0090bd6e565715fb3a256bd3442c3d48d1ddc2ba3ffc95658b8416a"
+    },
+    {
+      "analysis": "primary",
+      "name": "leighton_ratio_distributions.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/leighton_ratio_distributions.png",
+      "bytes": 76085,
+      "sha256": "a97d95e427ab2b1e72c62009dd09a3ad14e4e64ac365b4fe051ad10534d4f827"
+    },
+    {
+      "analysis": "primary",
+      "name": "temperature_correction.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/temperature_correction.png",
+      "bytes": 222659,
+      "sha256": "cde928104dbb35100380a003d8d38d53abeba1f1d504f41669f3854c66d8a05f"
+    },
+    {
+      "analysis": "primary",
+      "name": "uv_alignment_diagnostic.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/uv_alignment_diagnostic.png",
+      "bytes": 70316,
+      "sha256": "244a6a61218782598a6c7a263c90b7121db43ac3b7e16931addc60380e1abc53"
+    },
+    {
+      "analysis": "primary",
+      "name": "ho2_inferred_diagnostic.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/ho2_inferred_diagnostic.png",
+      "bytes": 239008,
+      "sha256": "8f541e05c0d42bd138b601359ddaf5fe3c8d2fe222ef9d3aea216883b8c89108"
+    },
+    {
+      "analysis": "primary",
+      "name": "condition_correlations.csv",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/condition_correlations.csv",
+      "bytes": 2959,
+      "sha256": "2a388d5f72990cbc7912c81b82d93b3b4804b8a8831a21b4f868fe98b4a7fbdf"
+    },
+    {
+      "analysis": "primary",
+      "name": "condition_report_metadata.json",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/condition_report_metadata.json",
+      "bytes": 1178,
+      "sha256": "a6a065b6104c572a21ec6c1c9510976a2848d1cda95427b440821ac80fee2e6f"
+    },
+    {
+      "analysis": "primary",
+      "name": "lr_vs_no.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/lr_vs_no.png",
+      "bytes": 142501,
+      "sha256": "4c3713554225f983ff5548b53201f220728cc7aeaf64f68c3994114e43e8c113"
+    },
+    {
+      "analysis": "primary",
+      "name": "lr_vs_no2.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/lr_vs_no2.png",
+      "bytes": 159600,
+      "sha256": "edab10b9b05ceac12d92ebed234f674264cac4d30e784212f288ea9371714c46"
+    },
+    {
+      "analysis": "primary",
+      "name": "lr_vs_o3.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/lr_vs_o3.png",
+      "bytes": 158109,
+      "sha256": "5959c2d10cfde9272bf88434db9760276109a03c28fde4e0b12be1910d0e1a04"
+    },
+    {
+      "analysis": "primary",
+      "name": "lr_vs_nox.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/lr_vs_nox.png",
+      "bytes": 152957,
+      "sha256": "9e46cff78bc6b57cb395c437a4f8716aeb1e0af7a16cba54c42b404f6ecda958"
+    },
+    {
+      "analysis": "primary",
+      "name": "lr_vs_j.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/lr_vs_j.png",
+      "bytes": 165957,
+      "sha256": "22e64c74075845e538e664222d2b3555fbf4462499fa5894719fe1d820e873ca"
+    },
+    {
+      "analysis": "primary",
+      "name": "lr_vs_uv.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/lr_vs_uv.png",
+      "bytes": 157915,
+      "sha256": "e668623098ab75e8c88f769d552869bba7cd1473d01fcdcb67c1c98b7cfc74ae"
+    },
+    {
+      "analysis": "primary",
+      "name": "lr_vs_solar_radiation.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/lr_vs_solar_radiation.png",
+      "bytes": 158170,
+      "sha256": "a06cb66f8c2859cff85a8f30899755b044d26d25d646490149ef2779e60200d8"
+    },
+    {
+      "analysis": "primary",
+      "name": "lr_vs_sza.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/lr_vs_sza.png",
+      "bytes": 173525,
+      "sha256": "adce52920615a6dd35264c4960a59a865580a994b8c0d21fe6f21971deecd2af"
+    },
+    {
+      "analysis": "primary",
+      "name": "lr_vs_temperature.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/lr_vs_temperature.png",
+      "bytes": 151988,
+      "sha256": "ad0dd35078fe50e34e8ef909e99e6ffc0955607dc8e73ca6f8174bcaad84cd0d"
+    },
+    {
+      "analysis": "primary",
+      "name": "lr_vs_clearing_index.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/lr_vs_clearing_index.png",
+      "bytes": 59851,
+      "sha256": "49cf04683e0c236458c468cd19120ac2000adbe28b0cc05a54836af91e76d1ce"
+    },
+    {
+      "analysis": "primary",
+      "name": "rox_equiv_vs_nox.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/rox_equiv_vs_nox.png",
+      "bytes": 92126,
+      "sha256": "0d84bb85bf95745b847614145cc8c82899167c31f7139a61b086bebbc6ecf861"
+    },
+    {
+      "analysis": "primary",
+      "name": "rox_equiv_vs_temperature.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/rox_equiv_vs_temperature.png",
+      "bytes": 92214,
+      "sha256": "5e3cfb4f6fa79a1e4e394345eb5a16bf076d375983ed2234b4673b68352634a7"
+    },
+    {
+      "analysis": "primary",
+      "name": "rox_equiv_vs_uv.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/rox_equiv_vs_uv.png",
+      "bytes": 95045,
+      "sha256": "c97951a407f1bd52a5268ba564bbcec7e35fdc2944495c5d8fd3b644ba8a3151"
+    },
+    {
+      "analysis": "primary",
+      "name": "rox_equiv_vs_solar_radiation.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/rox_equiv_vs_solar_radiation.png",
+      "bytes": 89742,
+      "sha256": "9631dc44e1656deebca51eb461eb6d86a9f14053b07a0039226ad34e18f064fc"
+    },
+    {
+      "analysis": "primary",
+      "name": "rox_equiv_vs_j.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/rox_equiv_vs_j.png",
+      "bytes": 89504,
+      "sha256": "62d6d8461ef458ae0168f8731b018ef26e61a66ac9dacae66eb43e7f6219190b"
+    },
+    {
+      "analysis": "primary",
+      "name": "rox_equiv_vs_clearing_index.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/rox_equiv_vs_clearing_index.png",
+      "bytes": 68659,
+      "sha256": "41e56a2cbfb7a10c86a81ec5c3b46db9a4754d38658296523f8a1b1568641a1b"
+    },
+    {
+      "analysis": "primary",
+      "name": "leighton_ratio_2024_available_observations.parquet",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/leighton_ratio_2024_available_observations.parquet",
+      "bytes": 192109,
+      "sha256": "e9eac6dfac1097f6e823d7ecd093652a7e7eef167de6b2297673fce47afe4d59"
+    },
+    {
+      "analysis": "primary",
+      "name": "hourly_diagnostics_2024_available_observations.parquet",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/hourly_diagnostics_2024_available_observations.parquet",
+      "bytes": 110554,
+      "sha256": "efd566da11b9ae8953c1c6e7a4f1add0c6daf2b4731c026f282a99d31e58ba18"
+    },
+    {
+      "analysis": "primary",
+      "name": "oxidative_regime_summary_2024_available_observations.csv",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_unfiltered/oxidative_regime_summary_2024_available_observations.csv",
+      "bytes": 4591,
+      "sha256": "793af2809b0be7ad6cd5a47b52d70f3bbbf8f75c16b49d7cf893200a5714491d"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "summary.json",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/summary.json",
+      "bytes": 14171,
+      "sha256": "4babe1fceab6572e8a288bc18068de2b65d9e66f66779485e06653305b9a2c65"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "no_threshold_sensitivity.csv",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/no_threshold_sensitivity.csv",
+      "bytes": 444,
+      "sha256": "2ce1cde2fd6279b875494cfce76bbaaece2c53af81193f15dbd682950efac17b"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "leighton_ratio_timeseries.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/leighton_ratio_timeseries.png",
+      "bytes": 134946,
+      "sha256": "30edde52cb6b46a1a8c25d6b13e3620fa9f107753095bf3efb4523894786523f"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "leighton_ratio_distributions.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/leighton_ratio_distributions.png",
+      "bytes": 72461,
+      "sha256": "4047c137fc5df40d9e30ad617c39c0bc3455ac227cc7d19d09832963c0038a86"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "temperature_correction.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/temperature_correction.png",
+      "bytes": 89036,
+      "sha256": "45daab2b29f43aecd8463bee300067a7b1ed4858d45f064df69e663a5e5a3c0e"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "uv_alignment_diagnostic.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/uv_alignment_diagnostic.png",
+      "bytes": 70316,
+      "sha256": "244a6a61218782598a6c7a263c90b7121db43ac3b7e16931addc60380e1abc53"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "ho2_inferred_diagnostic.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/ho2_inferred_diagnostic.png",
+      "bytes": 145262,
+      "sha256": "50e457029955d5ebe1f119f3c111f28b3981083cbb64d7a9ffa6d0b4a7061f9f"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "condition_correlations.csv",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/condition_correlations.csv",
+      "bytes": 3003,
+      "sha256": "fcb3a0ccaecb10be056485a589668027676746a9a5c28179614e66df54203195"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "condition_report_metadata.json",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/condition_report_metadata.json",
+      "bytes": 1148,
+      "sha256": "eb5fd2d0ebc1b041f75acc7130989e210f0594eb17056a887174ca886e882ea3"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "lr_vs_no.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/lr_vs_no.png",
+      "bytes": 78259,
+      "sha256": "8e7de9d0b225625a4bffeccbd7b74a973181208ef60d83975c0aa1350821e085"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "lr_vs_no2.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/lr_vs_no2.png",
+      "bytes": 75113,
+      "sha256": "dabb3d4dda904b33d54ca5c7c93f4425882cc5cb269c95d8004df5201f63f7fb"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "lr_vs_o3.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/lr_vs_o3.png",
+      "bytes": 76815,
+      "sha256": "346f9cc39b7bfde27caeba026c718e1c5d7958860131e8528a0dcac7e79dadda"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "lr_vs_nox.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/lr_vs_nox.png",
+      "bytes": 69890,
+      "sha256": "228c862eb2fb8a74a13fe721e17aa01ad636f3cbedd6a6e21694fbe6bcec2f14"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "lr_vs_j.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/lr_vs_j.png",
+      "bytes": 69846,
+      "sha256": "5220182f83cf153c9cf14986cedfd796d957ca289cce2da880256f0362af080d"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "lr_vs_uv.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/lr_vs_uv.png",
+      "bytes": 70277,
+      "sha256": "dec59343d9437ece45cf36fb8a1b07faad1845cfcb8f801d9a4045a0a331356d"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "lr_vs_solar_radiation.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/lr_vs_solar_radiation.png",
+      "bytes": 72813,
+      "sha256": "1e14c2e556acbaeda912595ff52892a22e7f5265e373725a04c7908e6b7df757"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "lr_vs_sza.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/lr_vs_sza.png",
+      "bytes": 82127,
+      "sha256": "feab2402d7348cef7f8e816c5effff3113048444f9dd6bd4ca8e4f68c0029f67"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "lr_vs_temperature.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/lr_vs_temperature.png",
+      "bytes": 73040,
+      "sha256": "96e6bb7a9365d24a125ea76a79a6fa8697d18a7dd0db452eea476513c8adf165"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "lr_vs_clearing_index.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/lr_vs_clearing_index.png",
+      "bytes": 68349,
+      "sha256": "21f556bf149dccb1f4fb0147ece44b25cd0797d7aab89bfefcbce4bb05f2d749"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "rox_equiv_vs_nox.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/rox_equiv_vs_nox.png",
+      "bytes": 63558,
+      "sha256": "d919f501f87c5ed5033904d07bcca62070bad36ffce5986f6cdc50971ad4fda8"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "rox_equiv_vs_temperature.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/rox_equiv_vs_temperature.png",
+      "bytes": 73710,
+      "sha256": "20a8d889623b5c0e65debe186dc9d9bcfc369ea3f15d2ac04354c428c3cd0b0d"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "rox_equiv_vs_uv.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/rox_equiv_vs_uv.png",
+      "bytes": 66515,
+      "sha256": "13458404f56d59e735f30415a0b045b56796ab1cad13dc7fb56fecbd909710c5"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "rox_equiv_vs_solar_radiation.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/rox_equiv_vs_solar_radiation.png",
+      "bytes": 69831,
+      "sha256": "ebbb13410a4489adb44c7dcaf62e3cd2f564d91c3c394a05abfc39d117d2cccf"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "rox_equiv_vs_j.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/rox_equiv_vs_j.png",
+      "bytes": 67646,
+      "sha256": "efdabaa61f1f758e3d35d9dad1716d27dd5cd9da4ba3e4e3dc2b2658b8edfc52"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "rox_equiv_vs_clearing_index.png",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/rox_equiv_vs_clearing_index.png",
+      "bytes": 69332,
+      "sha256": "4cdc6a0e7292b3ba5b6201cd3716edb33ea26a14aa2c696ac3433f6923350022"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "leighton_ratio_2024_available_observations.parquet",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/leighton_ratio_2024_available_observations.parquet",
+      "bytes": 73851,
+      "sha256": "4058ad3f4e26f5088a9661e63f388c35a342d503a8369fc85669a5c0dce16cd2"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "hourly_diagnostics_2024_available_observations.parquet",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/hourly_diagnostics_2024_available_observations.parquet",
+      "bytes": 30522,
+      "sha256": "3896f55f9c062b1eadd0bfd036f0ab01e9ff22c5df49e2a7cd04cf82ef254dcb"
+    },
+    {
+      "analysis": "sr_ci",
+      "name": "oxidative_regime_summary_2024_available_observations.csv",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/output/leighton_analysis_2024_sr_ci/oxidative_regime_summary_2024_available_observations.csv",
+      "bytes": 4787,
+      "sha256": "718aa552a6df1947289a03547b9114d61bd868412520312fb166bb611c1d94aa"
+    },
+    {
+      "analysis": "aqs_source_audit",
+      "name": "manifest.json",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/data/downloads/Hawthorne/20240101_20260728_20260729T004631Z/manifest.json",
+      "bytes": 991,
+      "sha256": "d34ebe8a132dc169de09e88f678cdc3632d3738b1100e80c17a79fc10281e176"
+    },
+    {
+      "analysis": "aqs_source_audit",
+      "name": "analysis_manifest.json",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/data/downloads/Hawthorne/20240101_20260728_20260729T004631Z/analysis_manifest.json",
+      "bytes": 684,
+      "sha256": "76efb98bc7c7935d528d2a0a941518c7af10ad24a1648870212c72dad532f3b2"
+    },
+    {
+      "analysis": "aqs_source_audit",
+      "name": "analysis_row_accounting.parquet",
+      "path": "/Users/isaacsudweeks/.codex/worktrees/f222/Leighton Relationship/data/downloads/Hawthorne/20240101_20260728_20260729T004631Z/analysis_row_accounting.parquet",
+      "bytes": 7434,
+      "sha256": "290114acf3280999f0a15649a8c299b5fc84532951917b9c977e9ee903556ab8"
+    }
+  ],
+  "limitations": [
+    "The state UV CSV has no row-level quality flags or calibration manifest.",
+    "AQS cleaning and row accounting are documented in the source snapshot.",
+    "Scientific interpretation is deferred to Callum and Jaron."
+  ]
+}

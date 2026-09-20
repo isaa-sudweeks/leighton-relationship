@@ -1,0 +1,17 @@
+response,response_label,response_units,predictor,predictor_label,predictor_units,total_rows,pairwise_valid_n,excluded_nonfinite_or_missing_n,status,pearson_r,pearson_p_value,spearman_rho,spearman_p_value,plot
+LR,Leighton ratio,dimensionless,NO,NO,ppb,44,44,0,ok,-0.8472963992323653,4.1114869455965667e-13,-0.9500827549910811,7.299405368712457e-23,lr_vs_no.png
+LR,Leighton ratio,dimensionless,NO2,NO2,ppb,44,44,0,ok,-0.719481521673119,3.7365885625157066e-08,-0.7309472070449304,1.7626281543718048e-08,lr_vs_no2.png
+LR,Leighton ratio,dimensionless,O3,O3,ppm,44,44,0,ok,0.3118052268244166,0.03935845193816119,0.3905544823046128,0.008765369882309984,lr_vs_o3.png
+LR,Leighton ratio,dimensionless,NOx,NOx,ppb,44,44,0,ok,-0.7701191313083927,9.868398932664837e-10,-0.7933151587092561,1.3518112579495752e-10,lr_vs_nox.png
+LR,Leighton ratio,dimensionless,J,J(NO2),s^-1,44,44,0,ok,0.2386566699141523,0.11872798984806066,0.19647639182522902,0.20115793116763805,lr_vs_j.png
+LR,Leighton ratio,dimensionless,UV,UV,W m^-2,44,44,0,ok,0.2882828354500006,0.057734366852530944,0.2927805668933216,0.05377115897707983,lr_vs_uv.png
+LR,Leighton ratio,dimensionless,SR_W_m2,Solar radiation,W m^-2,44,44,0,ok,0.21979147771485447,0.15169851088002403,0.25095296697485964,0.1003571439631769,lr_vs_solar_radiation.png
+LR,Leighton ratio,dimensionless,solar_zenith_angle_deg,Solar zenith angle,degrees,44,44,0,ok,-0.22787266787285473,0.13683725125159552,-0.24256518675123326,0.1126325306329102,lr_vs_sza.png
+LR,Leighton ratio,dimensionless,Temp,Temperature,degrees F,44,44,0,ok,0.13249474556854285,0.3912468469763818,0.10113639451618804,0.5136092686143275,lr_vs_temperature.png
+LR,Leighton ratio,dimensionless,clearing_index,Clearing index,dimensionless,44,44,0,ok,-0.13684760749488045,0.37573103711674716,-0.16838860579102496,0.27455492583502894,lr_vs_clearing_index.png
+ROx_equiv_molecules_cm3,Equivalent RO2,molecule cm^-3,NOx,NOx,ppb,44,37,7,ok,-0.5660961810402083,0.0002602821826415842,-0.57014074723512,0.00022971813717912105,rox_equiv_vs_nox.png
+ROx_equiv_molecules_cm3,Equivalent RO2,molecule cm^-3,Temp,Temperature,degrees F,44,37,7,ok,0.24496005542161764,0.14394377765376382,0.15227492737644682,0.3682673459608871,rox_equiv_vs_temperature.png
+ROx_equiv_molecules_cm3,Equivalent RO2,molecule cm^-3,UV,UV,W m^-2,44,37,7,ok,0.12250194617570201,0.4701087315230141,0.10309429472622118,0.5437208631894542,rox_equiv_vs_uv.png
+ROx_equiv_molecules_cm3,Equivalent RO2,molecule cm^-3,SR_W_m2,Solar radiation,W m^-2,44,37,7,ok,0.0854428127226646,0.6150970873662732,0.07961560302443882,0.6394944472152762,rox_equiv_vs_solar_radiation.png
+ROx_equiv_molecules_cm3,Equivalent RO2,molecule cm^-3,J,J(NO2),s^-1,44,37,7,ok,0.08334108973342003,0.6238515188644387,0.027975343764817445,0.8694486907164541,rox_equiv_vs_j.png
+ROx_equiv_molecules_cm3,Equivalent RO2,molecule cm^-3,clearing_index,Clearing index,dimensionless,44,37,7,ok,-0.048634665032810435,0.7749941401279081,-0.12559639153678334,0.45888013823209506,rox_equiv_vs_clearing_index.png
