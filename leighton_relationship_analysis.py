@@ -42,13 +42,17 @@ DEFAULT_AQS_PATH = Path(
 DEFAULT_UV_PATH = Path("data/UV Data/UV Data All Time HW LP RB.csv")
 DEFAULT_OUTPUT_DIR = Path("output/leighton_analysis")
 
-# JPL Evaluation 19-5 C19 recommended non-Arrhenius parameterization for
-# NO + O3 between 204 and 440 K (cm3 molecule-1 s-1).
-JPL_NO_O3_PREFACTOR = 3.32e-13
-JPL_NO_O3_TEMPERATURE_EXPONENT = 2.25
-JPL_NO_O3_ACTIVATION_OVER_R_K = 850.0
-JPL_NO_O3_REFERENCE_TEMPERATURE_K = 298.0
-JPL_NO_O3_SOURCE = "JPL Evaluation 19-5 (2020), reaction C19"
+# JPL Evaluation 20 expressions confirmed by Callum Flowerday's September 16,
+# 2026 email (cm3 molecule-1 s-1, with temperature in kelvin).
+JPL_NO_O3_PREFACTOR = 3.0e-12
+JPL_NO_O3_ACTIVATION_OVER_R_K = 1500.0
+JPL_NO_O3_SOURCE = (
+    "JPL Evaluation 20, confirmed by Callum Flowerday 2026-09-16 email"
+)
+JPL_HO2_NO_PREFACTOR = 3.44e-12
+JPL_HO2_NO_ACTIVATION_OVER_R_K = 260.0
+GENERIC_RO2_NO_PREFACTOR = 2.7e-12
+GENERIC_RO2_NO_ACTIVATION_OVER_R_K = 360.0
 PRESSURE_PA = 87_000.0
 BOLTZMANN_J_PER_K = 1.380649e-23
 F298 = 1.07
@@ -94,6 +98,19 @@ DIAGNOSTIC_COLUMNS = [
     "clearing_index",
     "LR",
     "log10_LR",
+    "k_no_o3_cm3_molecule_s",
+    "P_o3_molecules_cm3_s",
+    "P_total_molecules_cm3_s",
+    "P_excess_molecules_cm3_s",
+    "fractional_excess_oxidation",
+    "k_ro2_no_cm3_molecule_s",
+    "ROx_equiv_molecules_cm3",
+    "k_ho2_no_cm3_molecule_s",
+    "HO2_inferred_signed_molecules_cm3",
+    "HO2_inferred_molecules_cm3",
+    "LR_gt_1p5",
+    "LR_gt_2",
+    "LR_robustly_gt_1",
 ]
 
 
@@ -443,13 +460,10 @@ def calculate_leighton_ratio(
     config = config or AnalysisConfig()
     result = data.copy()
     result["Temp_K"] = (result["Temp"] - 32.0) * (5.0 / 9.0) + 273.15
-    result["K"] = (
-        JPL_NO_O3_PREFACTOR
-        * (result["Temp_K"] / JPL_NO_O3_REFERENCE_TEMPERATURE_K)
-        ** JPL_NO_O3_TEMPERATURE_EXPONENT
-        * np.exp(-JPL_NO_O3_ACTIVATION_OVER_R_K / result["Temp_K"])
+    result["K"] = JPL_NO_O3_PREFACTOR * np.exp(
+        -JPL_NO_O3_ACTIVATION_OVER_R_K / result["Temp_K"]
     )
-    result["k_no_o3_method"] = "JPL_19-5_C19_non_arrhenius"
+    result["k_no_o3_method"] = "JPL_20_arrhenius"
     result["f_T"] = F298 * np.exp(
         G_TEMPERATURE * (1.0 / result["Temp_K"] - 1.0 / 298.0)
     )
@@ -504,6 +518,46 @@ def calculate_leighton_ratio(
     if result.empty:
         raise ValueError("No finite Leighton-ratio values were calculated")
     result["log10_LR"] = np.log10(result["LR"])
+    result["k_no_o3_cm3_molecule_s"] = result["K"]
+    result["P_o3_molecules_cm3_s"] = (
+        result["K"]
+        * result["NO_molecules_cm3"]
+        * result["O3_molecules_cm3"]
+    )
+    result["P_total_molecules_cm3_s"] = (
+        result["J"] * result["NO2_molecules_cm3"]
+    )
+    result["P_excess_molecules_cm3_s"] = (
+        result["P_total_molecules_cm3_s"]
+        - result["P_o3_molecules_cm3_s"]
+    )
+    result["fractional_excess_oxidation"] = 1.0 - 1.0 / result["LR"]
+    result["k_ro2_no_cm3_molecule_s"] = GENERIC_RO2_NO_PREFACTOR * np.exp(
+        GENERIC_RO2_NO_ACTIVATION_OVER_R_K / result["Temp_K"]
+    )
+    result["k_ho2_no_cm3_molecule_s"] = JPL_HO2_NO_PREFACTOR * np.exp(
+        JPL_HO2_NO_ACTIVATION_OVER_R_K / result["Temp_K"]
+    )
+    positive_excess = result["P_excess_molecules_cm3_s"].gt(0.0)
+    result["ROx_equiv_molecules_cm3"] = (
+        result["P_excess_molecules_cm3_s"]
+        / (
+            result["k_ro2_no_cm3_molecule_s"]
+            * result["NO_molecules_cm3"]
+        )
+    ).where(positive_excess)
+    result["HO2_inferred_signed_molecules_cm3"] = (
+        result["P_excess_molecules_cm3_s"]
+        / (
+            result["k_ho2_no_cm3_molecule_s"]
+            * result["NO_molecules_cm3"]
+        )
+    )
+    result["HO2_inferred_molecules_cm3"] = result[
+        "HO2_inferred_signed_molecules_cm3"
+    ].where(positive_excess)
+    result["LR_gt_1p5"] = result["LR"].gt(1.5)
+    result["LR_gt_2"] = result["LR"].gt(2.0)
     result["provisional_total_lr_relative_uncertainty"] = (
         PROVISIONAL_TOTAL_LR_RELATIVE_UNCERTAINTY
     )
@@ -515,6 +569,9 @@ def calculate_leighton_ratio(
             )
         },
     )
+    result["LR_robustly_gt_1"] = (
+        result["LR"] - result["LR_quantified_absolute_uncertainty"]
+    ).gt(1.0)
     return result
 
 
@@ -1071,12 +1128,18 @@ def summarize(
             ),
             "sza_extrapolated_rows": int(data["tuv_sza_extrapolated"].sum()),
             "sza_method": "NOAA fractional-year solar-position approximation",
-            "no_o3_rate_constant_method": "JPL_19-5_C19_non_arrhenius",
+            "no_o3_rate_constant_method": "JPL_20_arrhenius",
             "no_o3_rate_constant_source": JPL_NO_O3_SOURCE,
             "no_o3_prefactor_cm3_molecule_s": JPL_NO_O3_PREFACTOR,
-            "no_o3_temperature_exponent": JPL_NO_O3_TEMPERATURE_EXPONENT,
             "no_o3_activation_over_r_k": JPL_NO_O3_ACTIVATION_OVER_R_K,
-            "no_o3_reference_temperature_k": JPL_NO_O3_REFERENCE_TEMPERATURE_K,
+            "generic_ro2_no_prefactor_cm3_molecule_s": (
+                GENERIC_RO2_NO_PREFACTOR
+            ),
+            "generic_ro2_no_activation_over_r_k": (
+                GENERIC_RO2_NO_ACTIVATION_OVER_R_K
+            ),
+            "ho2_no_prefactor_cm3_molecule_s": JPL_HO2_NO_PREFACTOR,
+            "ho2_no_activation_over_r_k": JPL_HO2_NO_ACTIVATION_OVER_R_K,
             "state_uv_area_or_scale_correction": "none",
             "fixed_pressure_pa": PRESSURE_PA,
             "timestamp_join": (
@@ -1170,8 +1233,37 @@ def run_analysis(
             "clearing_index": "dimensionless",
             "LR": "dimensionless",
             "log10_LR": "dimensionless",
+            "k_no_o3_cm3_molecule_s": "cm^3 molecule^-1 s^-1",
+            "P_o3_molecules_cm3_s": "molecule cm^-3 s^-1",
+            "P_total_molecules_cm3_s": "molecule cm^-3 s^-1",
+            "P_excess_molecules_cm3_s": "molecule cm^-3 s^-1",
+            "fractional_excess_oxidation": "dimensionless",
+            "k_ro2_no_cm3_molecule_s": "cm^3 molecule^-1 s^-1",
+            "ROx_equiv_molecules_cm3": "molecule cm^-3",
+            "k_ho2_no_cm3_molecule_s": "cm^3 molecule^-1 s^-1",
+            "HO2_inferred_signed_molecules_cm3": "molecule cm^-3",
+            "HO2_inferred_molecules_cm3": "molecule cm^-3",
+            "LR_gt_1p5": "boolean",
+            "LR_gt_2": "boolean",
+            "LR_robustly_gt_1": "boolean",
         },
-        "derivations": {"NOx": "NO + NO2"},
+        "derivations": {
+            "NOx": "NO + NO2",
+            "P_o3_molecules_cm3_s": "k_NO+O3 * [NO] * [O3]",
+            "P_total_molecules_cm3_s": "J(NO2) * [NO2]",
+            "P_excess_molecules_cm3_s": "P_total - P_o3",
+            "fractional_excess_oxidation": "1 - 1 / LR",
+            "ROx_equiv_molecules_cm3": (
+                "P_excess / (k_RO2+NO * [NO]); null unless P_excess > 0"
+            ),
+            "HO2_inferred_signed_molecules_cm3": (
+                "P_excess / (k_HO2+NO * [NO])"
+            ),
+            "HO2_inferred_molecules_cm3": (
+                "signed inferred HO2; null unless P_excess > 0"
+            ),
+            "LR_robustly_gt_1": "LR - LR quantified absolute uncertainty > 1",
+        },
         "clearing_index_availability": (
             "joined from the smoke-management archive"
             if "clearing_index" in data

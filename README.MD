@@ -117,11 +117,11 @@ legacy `7.784e-5 * UV / 2.84 * 10` expression rather than adding another scale f
 Each run also writes `no_threshold_sensitivity.csv` for strict cutoffs at 0,
 0.05, 0.10, 0.20, 0.50, and 1.0 ppb.
 
-The NO + O3 kinetic term uses the JPL Evaluation 19-5 C19 non-Arrhenius
-recommendation over its stated 204–440 K range:
+The NO + O3 kinetic term uses the JPL Evaluation 20 expression confirmed in
+Callum Flowerday's September 16, 2026 email:
 
 ```text
-k(T) = 3.32e-13 * (T / 298)^2.25 * exp(-850 / T)
+k(T) = 3.0e-12 * exp(-1500 / T)
 ```
 
 Analyze all jointly available observations within a calendar year and write an
@@ -146,7 +146,22 @@ temperature (degrees F), clearing index, LR, and log10(LR). NO and NO2 are in
 ppb and O3 is in ppm, matching the source AQS table. Clearing index is null
 when the optional SR/CI archive join was not requested; a null value must not
 be interpreted as a measured index. The same units and derivation are recorded
-in `summary.json` alongside the diagnostics filename and row count.
+in `summary.json` alongside the diagnostics filename and row count. The table
+also records the classical O3 production rate, total and signed excess NO2
+production rates, fractional excess oxidation, LR threshold flags, and
+separate generalized-RO2 and inferred-HO2 diagnostics. Mixing ratios are
+converted to molecule cm^-3 before applying the kinetic equations. Reported
+radical-equivalent concentrations are null unless excess production is
+positive, while the signed excess rate and signed inferred HO2 remain
+available for audit.
+
+The generalized organic RO2 and Jaron HO2 rate expressions are intentionally
+different:
+
+```text
+k_RO2+NO(T) = 2.7e-12 * exp(360 / T)
+k_HO2+NO(T) = 3.44e-12 * exp(260 / T)
+```
 
 Each successful run removes period-specific artifacts left by an earlier run
 in the same output directory before writing the new result. Unrelated files

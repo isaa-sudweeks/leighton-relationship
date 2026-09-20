@@ -10,10 +10,12 @@ from leighton_relationship_analysis import (
     AnalysisConfig,
     DEFAULT_TUV_QC_SZA_MAX_DEG,
     DEFAULT_TUV_QC_SZA_MIN_DEG,
+    GENERIC_RO2_NO_ACTIVATION_OVER_R_K,
+    GENERIC_RO2_NO_PREFACTOR,
+    JPL_HO2_NO_ACTIVATION_OVER_R_K,
+    JPL_HO2_NO_PREFACTOR,
     JPL_NO_O3_ACTIVATION_OVER_R_K,
     JPL_NO_O3_PREFACTOR,
-    JPL_NO_O3_REFERENCE_TEMPERATURE_K,
-    JPL_NO_O3_TEMPERATURE_EXPONENT,
     TUV_SZA_INTERCEPT_M2_W_S,
     TUV_SZA_SLOPE_M2_W_S_DEG,
     apply_no_threshold,
@@ -196,7 +198,7 @@ class LeightonAnalysisTests(unittest.TestCase):
         )
         self.assertIn("tuv_sza_extrapolated", result)
 
-    def test_jpl_19_5_non_arrhenius_rate_constant_is_used(self):
+    def test_email_confirmed_jpl_20_no_o3_rate_constant_is_used(self):
         data = pd.DataFrame(
             {
                 "Temp": [(298.0 - 273.15) * 9.0 / 5.0 + 32.0],
@@ -211,16 +213,70 @@ class LeightonAnalysisTests(unittest.TestCase):
 
         result = calculate_leighton_ratio(data)
 
-        expected = (
-            JPL_NO_O3_PREFACTOR
-            * (298.0 / JPL_NO_O3_REFERENCE_TEMPERATURE_K)
-            ** JPL_NO_O3_TEMPERATURE_EXPONENT
-            * math.exp(-JPL_NO_O3_ACTIVATION_OVER_R_K / 298.0)
+        expected = JPL_NO_O3_PREFACTOR * math.exp(
+            -JPL_NO_O3_ACTIVATION_OVER_R_K / 298.0
         )
         self.assertAlmostEqual(result["K"].iloc[0], expected)
         self.assertEqual(
             result["k_no_o3_method"].iloc[0],
-            "JPL_19-5_C19_non_arrhenius",
+            "JPL_20_arrhenius",
+        )
+
+    def test_excess_oxidation_and_radical_diagnostics_match_email_equations(self):
+        temperature_f = (298.0 - 273.15) * 9.0 / 5.0 + 32.0
+        data = pd.DataFrame(
+            {
+                "Temp": [temperature_f, temperature_f],
+                "UV": [20.0, 20.0],
+                "O3": [0.05, 0.05],
+                "NO": [1.0, 1.0],
+                "NO2": [10.0, 2.0],
+                "datetime_utc": pd.to_datetime(
+                    ["2025-05-21 19:00Z", "2025-05-21 20:00Z"]
+                ),
+            },
+            index=pd.DatetimeIndex(
+                ["2025-05-21 12:00", "2025-05-21 13:00"]
+            ),
+        )
+
+        result = calculate_leighton_ratio(data)
+
+        expected_ro2_rate = GENERIC_RO2_NO_PREFACTOR * math.exp(
+            GENERIC_RO2_NO_ACTIVATION_OVER_R_K / 298.0
+        )
+        expected_ho2_rate = JPL_HO2_NO_PREFACTOR * math.exp(
+            JPL_HO2_NO_ACTIVATION_OVER_R_K / 298.0
+        )
+        self.assertTrue(result["k_ro2_no_cm3_molecule_s"].eq(expected_ro2_rate).all())
+        self.assertTrue(result["k_ho2_no_cm3_molecule_s"].eq(expected_ho2_rate).all())
+        pd.testing.assert_series_equal(
+            result["P_excess_molecules_cm3_s"],
+            result["P_total_molecules_cm3_s"] - result["P_o3_molecules_cm3_s"],
+            check_names=False,
+        )
+        pd.testing.assert_series_equal(
+            result["fractional_excess_oxidation"],
+            1.0 - 1.0 / result["LR"],
+            check_names=False,
+        )
+        self.assertGreater(result["P_excess_molecules_cm3_s"].iloc[0], 0.0)
+        self.assertLess(result["P_excess_molecules_cm3_s"].iloc[1], 0.0)
+        self.assertTrue(pd.notna(result["ROx_equiv_molecules_cm3"].iloc[0]))
+        self.assertTrue(pd.isna(result["ROx_equiv_molecules_cm3"].iloc[1]))
+        self.assertTrue(pd.notna(result["HO2_inferred_molecules_cm3"].iloc[0]))
+        self.assertTrue(pd.isna(result["HO2_inferred_molecules_cm3"].iloc[1]))
+        self.assertLess(
+            result["HO2_inferred_signed_molecules_cm3"].iloc[1],
+            0.0,
+        )
+        self.assertEqual(
+            result["LR_robustly_gt_1"].tolist(),
+            (
+                result["LR"]
+                - result["LR_quantified_absolute_uncertainty"]
+                > 1.0
+            ).tolist(),
         )
 
     def test_sza_extrapolation_is_flagged_without_dropping_rows(self):
@@ -292,6 +348,19 @@ class LeightonAnalysisTests(unittest.TestCase):
                 "clearing_index": [850],
                 "LR": [1.5],
                 "log10_LR": [math.log10(1.5)],
+                "k_no_o3_cm3_molecule_s": [2.0e-14],
+                "P_o3_molecules_cm3_s": [4.0e8],
+                "P_total_molecules_cm3_s": [6.0e8],
+                "P_excess_molecules_cm3_s": [2.0e8],
+                "fractional_excess_oxidation": [1.0 / 3.0],
+                "k_ro2_no_cm3_molecule_s": [9.0e-12],
+                "ROx_equiv_molecules_cm3": [1.0e9],
+                "k_ho2_no_cm3_molecule_s": [8.0e-12],
+                "HO2_inferred_signed_molecules_cm3": [1.1e9],
+                "HO2_inferred_molecules_cm3": [1.1e9],
+                "LR_gt_1p5": [False],
+                "LR_gt_2": [False],
+                "LR_robustly_gt_1": [True],
                 "tuv_sza_extrapolated": [False],
             },
             index=pd.DatetimeIndex(
@@ -318,6 +387,19 @@ class LeightonAnalysisTests(unittest.TestCase):
                 "clearing_index",
                 "LR",
                 "log10_LR",
+                "k_no_o3_cm3_molecule_s",
+                "P_o3_molecules_cm3_s",
+                "P_total_molecules_cm3_s",
+                "P_excess_molecules_cm3_s",
+                "fractional_excess_oxidation",
+                "k_ro2_no_cm3_molecule_s",
+                "ROx_equiv_molecules_cm3",
+                "k_ho2_no_cm3_molecule_s",
+                "HO2_inferred_signed_molecules_cm3",
+                "HO2_inferred_molecules_cm3",
+                "LR_gt_1p5",
+                "LR_gt_2",
+                "LR_robustly_gt_1",
             ],
         )
         self.assertEqual(result.loc[0, "NOx"], 6.0)
@@ -337,6 +419,19 @@ class LeightonAnalysisTests(unittest.TestCase):
                 "Temp": [70.0],
                 "LR": [1.5],
                 "log10_LR": [math.log10(1.5)],
+                "k_no_o3_cm3_molecule_s": [2.0e-14],
+                "P_o3_molecules_cm3_s": [4.0e8],
+                "P_total_molecules_cm3_s": [6.0e8],
+                "P_excess_molecules_cm3_s": [2.0e8],
+                "fractional_excess_oxidation": [1.0 / 3.0],
+                "k_ro2_no_cm3_molecule_s": [9.0e-12],
+                "ROx_equiv_molecules_cm3": [1.0e9],
+                "k_ho2_no_cm3_molecule_s": [8.0e-12],
+                "HO2_inferred_signed_molecules_cm3": [1.1e9],
+                "HO2_inferred_molecules_cm3": [1.1e9],
+                "LR_gt_1p5": [False],
+                "LR_gt_2": [False],
+                "LR_robustly_gt_1": [True],
             },
             index=pd.DatetimeIndex(
                 ["2025-06-01 12:00"], name="datetime_local_standard"
@@ -364,6 +459,19 @@ class LeightonAnalysisTests(unittest.TestCase):
                 "Temp": [70.0],
                 "LR": [1.5],
                 "log10_LR": [math.log10(1.5)],
+                "k_no_o3_cm3_molecule_s": [2.0e-14],
+                "P_o3_molecules_cm3_s": [4.0e8],
+                "P_total_molecules_cm3_s": [6.0e8],
+                "P_excess_molecules_cm3_s": [2.0e8],
+                "fractional_excess_oxidation": [1.0 / 3.0],
+                "k_ro2_no_cm3_molecule_s": [9.0e-12],
+                "ROx_equiv_molecules_cm3": [1.0e9],
+                "k_ho2_no_cm3_molecule_s": [8.0e-12],
+                "HO2_inferred_signed_molecules_cm3": [1.1e9],
+                "HO2_inferred_molecules_cm3": [1.1e9],
+                "LR_gt_1p5": [False],
+                "LR_gt_2": [False],
+                "LR_robustly_gt_1": [True],
                 "tuv_sza_extrapolated": [False],
             },
             index=index,

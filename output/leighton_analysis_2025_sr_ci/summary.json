@@ -128,19 +128,19 @@
   },
   "all_observations": {
     "count": 44,
-    "median": 1.51058774502785,
-    "p10": 0.9881218787258028,
-    "p90": 2.120833880619895,
-    "minimum": 0.8530336603857293,
-    "maximum": 2.3711065465159384
+    "median": 1.479865888656465,
+    "p10": 0.9682448733357282,
+    "p90": 2.0785674913738594,
+    "minimum": 0.8372150587956061,
+    "maximum": 2.3295133476254284
   },
   "daytime_window": {
     "count": 44,
-    "median": 1.51058774502785,
-    "p10": 0.9881218787258028,
-    "p90": 2.120833880619895,
-    "minimum": 0.8530336603857293,
-    "maximum": 2.3711065465159384
+    "median": 1.479865888656465,
+    "p10": 0.9682448733357282,
+    "p90": 2.0785674913738594,
+    "minimum": 0.8372150587956061,
+    "maximum": 2.3295133476254284
   },
   "outside_window": {
     "count": 0,
@@ -166,12 +166,14 @@
     "tuv_sza_range_basis": "six May 21, 2025 NCAR TUV calculations in Callum's 2026-08-14 handoff",
     "sza_extrapolated_rows": 5,
     "sza_method": "NOAA fractional-year solar-position approximation",
-    "no_o3_rate_constant_method": "JPL_19-5_C19_non_arrhenius",
-    "no_o3_rate_constant_source": "JPL Evaluation 19-5 (2020), reaction C19",
-    "no_o3_prefactor_cm3_molecule_s": 3.32e-13,
-    "no_o3_temperature_exponent": 2.25,
-    "no_o3_activation_over_r_k": 850.0,
-    "no_o3_reference_temperature_k": 298.0,
+    "no_o3_rate_constant_method": "JPL_20_arrhenius",
+    "no_o3_rate_constant_source": "JPL Evaluation 20, confirmed by Callum Flowerday 2026-09-16 email",
+    "no_o3_prefactor_cm3_molecule_s": 3e-12,
+    "no_o3_activation_over_r_k": 1500.0,
+    "generic_ro2_no_prefactor_cm3_molecule_s": 2.7e-12,
+    "generic_ro2_no_activation_over_r_k": 360.0,
+    "ho2_no_prefactor_cm3_molecule_s": 3.44e-12,
+    "ho2_no_activation_over_r_k": 260.0,
     "state_uv_area_or_scale_correction": "none",
     "fixed_pressure_pa": 87000.0,
     "timestamp_join": "UV timestamp shifted by the selected integer-hour lag, then matched exactly to AQS Local Standard Time"
@@ -211,7 +213,20 @@
       "Temp",
       "clearing_index",
       "LR",
-      "log10_LR"
+      "log10_LR",
+      "k_no_o3_cm3_molecule_s",
+      "P_o3_molecules_cm3_s",
+      "P_total_molecules_cm3_s",
+      "P_excess_molecules_cm3_s",
+      "fractional_excess_oxidation",
+      "k_ro2_no_cm3_molecule_s",
+      "ROx_equiv_molecules_cm3",
+      "k_ho2_no_cm3_molecule_s",
+      "HO2_inferred_signed_molecules_cm3",
+      "HO2_inferred_molecules_cm3",
+      "LR_gt_1p5",
+      "LR_gt_2",
+      "LR_robustly_gt_1"
     ],
     "units": {
       "NO": "ppb",
@@ -225,10 +240,31 @@
       "Temp": "degrees F",
       "clearing_index": "dimensionless",
       "LR": "dimensionless",
-      "log10_LR": "dimensionless"
+      "log10_LR": "dimensionless",
+      "k_no_o3_cm3_molecule_s": "cm^3 molecule^-1 s^-1",
+      "P_o3_molecules_cm3_s": "molecule cm^-3 s^-1",
+      "P_total_molecules_cm3_s": "molecule cm^-3 s^-1",
+      "P_excess_molecules_cm3_s": "molecule cm^-3 s^-1",
+      "fractional_excess_oxidation": "dimensionless",
+      "k_ro2_no_cm3_molecule_s": "cm^3 molecule^-1 s^-1",
+      "ROx_equiv_molecules_cm3": "molecule cm^-3",
+      "k_ho2_no_cm3_molecule_s": "cm^3 molecule^-1 s^-1",
+      "HO2_inferred_signed_molecules_cm3": "molecule cm^-3",
+      "HO2_inferred_molecules_cm3": "molecule cm^-3",
+      "LR_gt_1p5": "boolean",
+      "LR_gt_2": "boolean",
+      "LR_robustly_gt_1": "boolean"
     },
     "derivations": {
-      "NOx": "NO + NO2"
+      "NOx": "NO + NO2",
+      "P_o3_molecules_cm3_s": "k_NO+O3 * [NO] * [O3]",
+      "P_total_molecules_cm3_s": "J(NO2) * [NO2]",
+      "P_excess_molecules_cm3_s": "P_total - P_o3",
+      "fractional_excess_oxidation": "1 - 1 / LR",
+      "ROx_equiv_molecules_cm3": "P_excess / (k_RO2+NO * [NO]); null unless P_excess > 0",
+      "HO2_inferred_signed_molecules_cm3": "P_excess / (k_HO2+NO * [NO])",
+      "HO2_inferred_molecules_cm3": "signed inferred HO2; null unless P_excess > 0",
+      "LR_robustly_gt_1": "LR - LR quantified absolute uncertainty > 1"
     },
     "clearing_index_availability": "joined from the smoke-management archive"
   },
@@ -237,49 +273,49 @@
       "minimum_no_ppb": 0.0,
       "operator": ">",
       "count": 76,
-      "median_lr": 2.070675652552576,
-      "p90_lr": 4.899867782677887,
-      "max_lr": 5.675424831672543
+      "median_lr": 2.0314182088800683,
+      "p90_lr": 4.799467070642377,
+      "max_lr": 5.569157261609616
     },
     {
       "minimum_no_ppb": 0.05,
       "operator": ">",
       "count": 76,
-      "median_lr": 2.070675652552576,
-      "p90_lr": 4.899867782677887,
-      "max_lr": 5.675424831672543
+      "median_lr": 2.0314182088800683,
+      "p90_lr": 4.799467070642377,
+      "max_lr": 5.569157261609616
     },
     {
       "minimum_no_ppb": 0.1,
       "operator": ">",
       "count": 56,
-      "median_lr": 1.6453034074096575,
-      "p90_lr": 2.6618430406180575,
-      "max_lr": 3.042744640349494
+      "median_lr": 1.6119964778437823,
+      "p90_lr": 2.6109045646858156,
+      "max_lr": 2.9837882111552845
     },
     {
       "minimum_no_ppb": 0.2,
       "operator": ">",
       "count": 44,
-      "median_lr": 1.51058774502785,
-      "p90_lr": 2.120833880619895,
-      "max_lr": 2.3711065465159384
+      "median_lr": 1.479865888656465,
+      "p90_lr": 2.0785674913738594,
+      "max_lr": 2.3295133476254284
     },
     {
       "minimum_no_ppb": 0.5,
       "operator": ">",
       "count": 23,
-      "median_lr": 1.1479685509730748,
-      "p90_lr": 1.5143644656702226,
-      "max_lr": 1.5755688250896158
+      "median_lr": 1.1245205779322018,
+      "p90_lr": 1.4833274171345623,
+      "max_lr": 1.545280818028379
     },
     {
       "minimum_no_ppb": 1.0,
       "operator": ">",
       "count": 11,
-      "median_lr": 0.998210484150306,
-      "p90_lr": 1.0639870349583556,
-      "max_lr": 1.1205296713754738
+      "median_lr": 0.977669778066985,
+      "p90_lr": 1.0435334398410174,
+      "max_lr": 1.0985001237324499
     }
   ]
 }
