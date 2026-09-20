@@ -155,6 +155,16 @@ radical-equivalent concentrations are null unless excess production is
 positive, while the signed excess rate and signed inferred HO2 remain
 available for audit.
 
+Each hourly diagnostics row also has an `oxidative_regime` classification:
+`LR < 1`, `1 <= LR < 1.5`, `1.5 <= LR < 2`, or `LR >= 2`. Missing or
+non-finite LR values remain unclassified. The period-specific
+`oxidative_regime_summary_<period>.csv` provides one row per regime-variable
+pair for NO, NO2, O3, NOx, J, UV, solar radiation, SZA, temperature, and
+clearing index. It records units, total regime rows, valid and missing counts,
+mean, sample standard deviation, minimum, quartiles, median, and maximum.
+Empty regimes and entirely missing variables are retained explicitly. These
+outputs are descriptive and do not assign atmospheric meaning to a regime.
+
 The generalized organic RO2 and Jaron HO2 rate expressions are intentionally
 different:
 

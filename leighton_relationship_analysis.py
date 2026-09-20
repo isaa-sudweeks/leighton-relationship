@@ -32,6 +32,12 @@ from lr_uncertainty import (
     add_quantified_lr_uncertainty,
     combine_independent_relative_uncertainties,
 )
+from oxidative_regimes import (
+    OXIDATIVE_REGIME_LABELS,
+    OXIDATIVE_REGIME_VARIABLE_UNITS,
+    classify_oxidative_regime,
+    summarize_oxidative_regimes,
+)
 from sr_ci_filter import apply_sr_ci_filters
 
 
@@ -97,6 +103,7 @@ DIAGNOSTIC_COLUMNS = [
     "Temp",
     "clearing_index",
     "LR",
+    "oxidative_regime",
     "log10_LR",
     "k_no_o3_cm3_molecule_s",
     "P_o3_molecules_cm3_s",
@@ -612,6 +619,9 @@ def build_hourly_diagnostics(data: pd.DataFrame) -> pd.DataFrame:
     diagnostics["NOx"] = diagnostics["NO"] + diagnostics["NO2"]
     if "clearing_index" not in diagnostics:
         diagnostics["clearing_index"] = pd.NA
+    diagnostics["oxidative_regime"] = classify_oxidative_regime(
+        diagnostics["LR"]
+    )
     return diagnostics.loc[:, DIAGNOSTIC_COLUMNS]
 
 
@@ -621,6 +631,7 @@ def clear_stale_analysis_artifacts(output_dir: Path) -> None:
     for pattern in (
         "leighton_ratio_*.parquet",
         "hourly_diagnostics_*.parquet",
+        "oxidative_regime_summary_*.csv",
     ):
         for path in output_dir.glob(pattern):
             path.unlink()
@@ -1210,10 +1221,15 @@ def run_analysis(
     correction_path = output_dir / "temperature_correction.png"
     alignment_path = output_dir / "uv_alignment_diagnostic.png"
     no_sensitivity_path = output_dir / "no_threshold_sensitivity.csv"
+    regime_summary_path = (
+        output_dir / f"oxidative_regime_summary_{period_slug}.csv"
+    )
 
     data.reset_index().to_parquet(processed_path, index=False)
     diagnostics = build_hourly_diagnostics(data)
     diagnostics.to_parquet(diagnostics_path, index=False)
+    regime_summary = summarize_oxidative_regimes(diagnostics)
+    regime_summary.to_csv(regime_summary_path, index=False)
     sensitivity.to_csv(no_sensitivity_path, index=False)
     summary = summarize(data, daytime, outside, accounting, config)
     summary["hourly_diagnostics"] = {
@@ -1232,6 +1248,7 @@ def run_analysis(
             "Temp": "degrees F",
             "clearing_index": "dimensionless",
             "LR": "dimensionless",
+            "oxidative_regime": "categorical LR interval",
             "log10_LR": "dimensionless",
             "k_no_o3_cm3_molecule_s": "cm^3 molecule^-1 s^-1",
             "P_o3_molecules_cm3_s": "molecule cm^-3 s^-1",
@@ -1269,6 +1286,32 @@ def run_analysis(
             if "clearing_index" in data
             else "unavailable; values are null because SR/CI join was not requested"
         ),
+    }
+    regime_counts = diagnostics["oxidative_regime"].value_counts(sort=False)
+    summary["oxidative_regimes"] = {
+        "path": regime_summary_path.name,
+        "classification_column": "oxidative_regime",
+        "intervals": list(OXIDATIVE_REGIME_LABELS),
+        "classified_rows": int(diagnostics["oxidative_regime"].notna().sum()),
+        "unclassified_rows": int(diagnostics["oxidative_regime"].isna().sum()),
+        "counts": {
+            label: int(regime_counts.get(label, 0))
+            for label in OXIDATIVE_REGIME_LABELS
+        },
+        "variables": dict(OXIDATIVE_REGIME_VARIABLE_UNITS),
+        "statistics": [
+            "regime_rows",
+            "valid_count",
+            "missing_count",
+            "mean",
+            "std",
+            "min",
+            "p25",
+            "median",
+            "p75",
+            "max",
+        ],
+        "scope": "descriptive statistics only; no atmospheric interpretation",
     }
     summary["no_threshold_sensitivity"] = sensitivity.replace(
         {np.nan: None}
@@ -1334,6 +1377,7 @@ def run_analysis(
 
     print(f"Saved {len(data)} analyzed rows to {processed_path}")
     print(f"Saved {len(diagnostics)} hourly diagnostics rows to {diagnostics_path}")
+    print(f"Saved oxidative-regime summaries to {regime_summary_path}")
     print(
         "Leighton ratio: "
         f"median={data['LR'].median():.3f}, "
